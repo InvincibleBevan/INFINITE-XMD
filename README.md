@@ -9,10 +9,10 @@
 ## 🌐 Live Deployments
 
 ### 🔷 Heroku Deployment
-[![Deploy to Heroku](https://img.shields.io/badge/Deploy_to-Heroku-430098?style=for-the-badge&logo=heroku)](https://heroku.com/deploy?template=https://github.com/your-username/infinite-xmd-bot)
+[![Deploy to Heroku](https://img.shields.io/badge/Deploy_to-Heroku-430098?style=for-the-badge&logo=heroku)](https://heroku.com/deploy?template=https://github.com/invinciblebevan/infinite-xmd-bot)
 
 ### 🔶 Render Deployment  
-[![Deploy to Render](https://img.shields.io/badge/Deploy_to-Render-46a3b7?style=for-the-badge&logo=render)](https://render.com/deploy?repo=https://github.com/your-username/infinite-xmd-bot)
+[![Deploy to Render](https://img.shields.io/badge/Deploy_to-Render-46a3b7?style=for-the-badge&logo=render)](https://render.com/deploy?repo=https://github.com/invinciblebevan/infinite-xmd-bot)
 
 ## 💝 Credits
 **Developed with ❤️ by Bevan Society**  
