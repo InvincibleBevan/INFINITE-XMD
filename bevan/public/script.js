@@ -1,40 +1,48 @@
-let currentTab = 'qr-tab';
+async function generatePairingCode() {
+    const number = document.getElementById('codeNumber').value.trim();
+    if (!number || !/^\d{10,15}$/.test(number)) {
+        alert('Please enter a valid WhatsApp number (10-15 digits). Include country code without + (e.g., 254712345678)');
+        return;
+    }
 
-function showTab(tabId) {
-    // Hide all tabs
-    document.querySelectorAll('.tab-content').forEach(tab => {
-        tab.classList.remove('active');
-    });
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.classList.remove('active');
-    });
+    const codeDisplay = document.getElementById('codeDisplay');
+    const codeStatus = document.getElementById('codeStatus');
     
-    // Show selected tab
-    document.getElementById(tabId).classList.add('active');
-    document.querySelector(`.tab-btn[onclick="showTab('${tabId}')"]`).classList.add('active');
-    currentTab = tabId;
-}
-
-async function generateQR() {
-    // NO phone number needed for QR code!
-    document.getElementById('qrStatus').textContent = 'Generating QR code...';
-    document.getElementById('qrStatus').style.color = '#333';
+    codeStatus.textContent = 'Requesting pairing code from WhatsApp...';
+    codeStatus.style.color = '#333';
+    codeDisplay.textContent = '';
     
     try {
-        const response = await fetch(`/api/pair/qr`);
+        const response = await fetch(`/api/pair/code?number=${number}`);
+        
+        if (!response.ok) {
+            throw new Error(`Server error: ${response.status}`);
+        }
+        
         const data = await response.json();
         
         if (data.success) {
-            // Display QR code using the actual QR data from Baileys
-            const qrContainer = document.getElementById('qrcode');
-            qrContainer.innerHTML = '';
+            codeDisplay.textContent = data.code;
+            codeStatus.innerHTML = `
+                ✅ <strong>Pairing code generated!</strong><br>
+                📱 <strong>How to use:</strong><br>
+                1. Open WhatsApp<br>
+                2. Go to Menu → Linked Devices<br>
+                3. Tap "Link with pairing code"<br>
+                4. Enter this code: <strong>${data.code}</strong>
+            `;
+            codeStatus.style.color = 'green';
             
-            const img = document.createElement('img');
-            img.src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(data.qr)}`;
-            img.alt = 'WhatsApp QR Code';
-            img.className = 'qr-image';
-            
-            qrContainer.appendChild(img);
+        } else {
+            codeStatus.innerHTML = `❌ Error: ${data.error || 'Failed to generate code'}<br>💡 Tip: ${data.tip || 'Try using full number with country code'}`;
+            codeStatus.style.color = 'red';
+        }
+    } catch (error) {
+        codeStatus.innerHTML = '❌ Failed to generate pairing code. Please try again.<br>💡 Make sure to use full number with country code (e.g., 254712345678)';
+        codeStatus.style.color = 'red';
+        console.error('Pairing Code Error:', error);
+    }
+}            qrContainer.appendChild(img);
             document.getElementById('qrStatus').textContent = 'Scan this QR code with WhatsApp';
             document.getElementById('qrStatus').style.color = 'green';
         } else {
