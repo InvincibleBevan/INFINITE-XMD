@@ -29,12 +29,51 @@
 
             <div class="qr-container">
                 <div id="qrcode">
-                    <div class="placeholder">QR code will appear here</div>
+                    <!-- ADD THIS LOADING PLACEHOLDER -->
+                    <div class="qr-placeholder loading" id="qrPlaceholder">
+                        <div style="font-size: 48px; margin-bottom: 15px;">⏳</div>
+                        <div>QR code will appear here</div>
+                    </div>
                 </div>
                 <p id="qrStatus">Click "Generate QR Code" to begin</p>
             </div>
         </div>
 
+        <!-- Pairing Code Tab -->
+        <div id="code-tab" class="tab-content">
+            <div class="input-group">
+                <label>Your WhatsApp Number:</label>
+                <input type="text" id="codeNumber" placeholder="254712345678" pattern="[0-9]{10,15}">
+                <small>Include country code without + (e.g., 254712345678)</small>
+            </div>
+
+            <button onclick="generatePairingCode()" class="action-btn">⚡ Get Pairing Code</button>
+
+            <div id="codeResult" class="result-box">
+                <div id="codeDisplay"></div>
+                <p id="codeStatus">Enter your number and click generate</p>
+            </div>
+        </div>
+
+        <div class="instructions">
+            <h3>📋 How it works:</h3>
+            <ul>
+                <li>Choose QR code or pairing code method</li>
+                <li>Session ID will be sent to your WhatsApp</li>
+                <li>Use the session ID in your bot</li>
+                <li>Keep your session ID secure</li>
+            </ul>
+        </div>
+
+        <div class="footer">
+            <p>⚡ Powered by Bevan Society Technology</p>
+            <p>🔒 Your sessions are sent only to your WhatsApp</p>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+    </html>
         <!-- Pairing Code Tab -->
         <div id="code-tab" class="tab-content">
             <div class="input-group">
