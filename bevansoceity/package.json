@@ -7,14 +7,6 @@
     "start": "node index.js",
     "dev": "nodemon index.js"
   },
-  "keywords": [
-    "whatsapp",
-    "bot",
-    "infinite-xmd",
-    "bevan-society"
-  ],
-  "author": "Bevan Society",
-  "license": "MIT",
   "dependencies": {
     "whatsapp-web.js": "^1.23.0",
     "qrcode-terminal": "^0.12.0",
