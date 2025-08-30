@@ -1,89 +1,73 @@
-const express = require('express');
-const path = require('path');
-const fs = require('fs').promises;
-const { Server } = require('socket.io');
-const http = require('http');
-const qrcode = require('qrcode');
+let currentTab = 'qr-tab';
 
-const app = express();
-const server = http.createServer(app);
-const io = new Server(server);
-
-const PORT = process.env.PORT || 3000;
-
-// Middleware
-app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
-
-let ownerNumber = null;
-let currentQR = null;
-
-// Socket.io for real-time QR updates
-io.on('connection', (socket) => {
-    console.log('User connected to website');
+function showTab(tabId) {
+    // Hide all tabs
+    document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
     
-    if (currentQR) {
-        socket.emit('qr', currentQR);
-    }
-});
+    // Show selected tab
+    document.getElementById(tabId).classList.add('active');
+    document.querySelector(`.tab-btn[onclick="showTab('${tabId}')"]`).classList.add('active');
+    currentTab = tabId;
+}
 
-// API endpoints
-app.post('/api/qr', async (req, res) => {
-    try {
-        const { qr } = req.body;
-        currentQR = await qrcode.toDataURL(qr);
-        io.emit('qr', currentQR);
-        res.json({ success: true });
-    } catch (error) {
-        res.json({ success: false, error: error.message });
+async function generateQR() {
+    const number = document.getElementById('qrNumber').value.trim();
+    if (!number || !/^\d{10,15}$/.test(number)) {
+        alert('Please enter a valid WhatsApp number (10-15 digits)');
+        return;
     }
-});
 
-// Owner number APIs (keep your existing ones)
-app.post('/api/save-owner', async (req, res) => {
+    document.getElementById('qrStatus').textContent = 'Generating QR code...';
+    
     try {
-        const { number } = req.body;
-        if (!number || !number.endsWith('@c.us')) {
-            return res.json({ success: false, message: 'Invalid number format' });
+        const response = await fetch(`/api/pair/qr?number=${number}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            // Display QR code
+            const qrContainer = document.getElementById('qrcode');
+            qrContainer.innerHTML = '';
+            
+            const img = document.createElement('img');
+            img.src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(data.qr)}`;
+            img.alt = 'WhatsApp QR Code';
+            img.className = 'qr-image';
+            
+            qrContainer.appendChild(img);
+            document.getElementById('qrStatus').textContent = 'Scan this QR code with WhatsApp';
+        } else {
+            document.getElementById('qrStatus').textContent = 'Error: ' + data.error;
         }
-        
-        ownerNumber = number;
-        await fs.writeFile('owner.json', JSON.stringify({ number }));
-        
-        console.log('✅ Owner number saved:', number);
-        res.json({ success: true, message: 'Number saved successfully' });
-        
     } catch (error) {
-        res.json({ success: false, message: 'Server error' });
+        document.getElementById('qrStatus').textContent = 'Failed to generate QR code';
     }
-});
+}
 
-app.get('/api/get-owner', async (req, res) => {
+async function generatePairingCode() {
+    const number = document.getElementById('codeNumber').value.trim();
+    if (!number || !/^\d{10,15}$/.test(number)) {
+        alert('Please enter a valid WhatsApp number (10-15 digits)');
+        return;
+    }
+
+    document.getElementById('codeStatus').textContent = 'Generating pairing code...';
+    
     try {
-        const data = await fs.readFile('owner.json', 'utf8');
-        const saved = JSON.parse(data);
-        ownerNumber = saved.number;
+        const response = await fetch(`/api/pair/code?number=${number}`);
+        const data = await response.json();
+        
+        if (data.success) {
+            document.getElementById('codeDisplay').textContent = data.code;
+            document.getElementById('codeStatus').textContent = 'Use this code in WhatsApp → Linked Devices';
+        } else {
+            document.getElementById('codeStatus').textContent = 'Error: ' + data.error;
+        }
     } catch (error) {
-        // File doesn't exist yet
+        document.getElementById('codeStatus').textContent = 'Failed to generate pairing code';
     }
-    res.json({ number: ownerNumber });
-});
-
-// Serve different pages
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
-
-app.get('/pair', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'pair.html'));
-});
-
-app.get('/owner', (req, res) => {
-    res.sendFile(path.join(__dirname, 'public', 'owner.html'));
-});
-
-server.listen(PORT, () => {
-    console.log(`🌐 INFINITE-XMD Website running on port ${PORT}`);
-    console.log('💻 Developed by Bevan Society');
-    console.log('📁 Pages available: /, /pair, /owner');
-});
+}
