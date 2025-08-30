@@ -8,6 +8,7 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
+// Use Render's port or default to 3000 for local
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
@@ -24,13 +25,4 @@ app.get('/', (req, res) => {
 server.listen(PORT, () => {
     console.log(`🌐 INFINITE-XMD Session Generator running on port ${PORT}`);
     console.log('💻 Developed by Bevan Society');
-    console.log('📱 Base64 Session + Baileys Pairing');
-    console.log('🚀 Ready for pairing codes and QR codes');
-});
-
-// Add CORS support
-app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
-    next();
 });
