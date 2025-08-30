@@ -1,68 +1,56 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs').promises;
+const { Server } = require('socket.io');
+const http = require('http');
+const qrcode = require('qrcode');
 
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server);
+
 const PORT = process.env.PORT || 3000;
 
-// Middleware to parse JSON
+// Middleware
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Store owner number (in production, use a database)
 let ownerNumber = null;
+let currentQR = null;
 
-// API to save owner number
-app.post('/api/save-owner', async (req, res) => {
-    try {
-        const { number } = req.body;
-        
-        if (!number || !number.endsWith('@c.us')) {
-            return res.json({ success: false, message: 'Invalid number format' });
-        }
-        
-        ownerNumber = number;
-        
-        // Save to file (optional persistence)
-        await fs.writeFile('owner.json', JSON.stringify({ number }));
-        
-        console.log('✅ Owner number saved:', number);
-        res.json({ success: true, message: 'Number saved successfully' });
-        
-    } catch (error) {
-        console.error('Error saving owner number:', error);
-        res.json({ success: false, message: 'Server error' });
+// Store QR code
+io.on('connection', (socket) => {
+    console.log('User connected to website');
+    
+    // Send current QR if exists
+    if (currentQR) {
+        socket.emit('qr', currentQR);
     }
 });
 
-// API to get owner number
-app.get('/api/get-owner', async (req, res) => {
+// API to receive QR from bot
+app.post('/api/qr', async (req, res) => {
     try {
-        // Try to read from file
-        try {
-            const data = await fs.readFile('owner.json', 'utf8');
-            const saved = JSON.parse(data);
-            ownerNumber = saved.number;
-        } catch (error) {
-            // File doesn't exist yet
-        }
+        const { qr } = req.body;
+        currentQR = qr;
         
-        res.json({ number: ownerNumber });
+        // Convert to data URL for web display
+        const qrDataUrl = await qrcode.toDataURL(qr);
+        io.emit('qr', qrDataUrl);
+        
+        res.json({ success: true });
     } catch (error) {
-        res.json({ number: null });
+        res.json({ success: false, error: error.message });
     }
 });
 
-// Get owner number for bot use
-app.get('/api/owner-number', (req, res) => {
-    res.json({ number: ownerNumber });
-});
+// ... keep your existing owner number APIs ...
 
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
-app.listen(PORT, () => {
+server.listen(PORT, () => {
     console.log(`🌐 INFINITE-XMD Session Website running on port ${PORT}`);
     console.log('💻 Developed by Bevan Society');
 });
