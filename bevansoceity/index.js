@@ -1,25 +1,35 @@
 const { Client } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
-const Base64AuthStrategy = require('./auth');
+const axios = require('axios');
+const { Base64AuthStrategy, setClient } = require('./auth');
 const commands = require('./commands');
 const { updateBio } = require('./autobio');
 
 console.log('🚀 Starting INFINITE-XMD WhatsApp Bot...');
 console.log('💻 Developed by Bevan Society');
 
-// Create client with auth strategy that receives client reference
 const client = new Client({
-    authStrategy: new Base64AuthStrategy(client), // Pass client to auth
+    authStrategy: new Base64AuthStrategy(),
     puppeteer: {
         args: ['--no-sandbox', '--disable-setuid-sandbox'],
         headless: true
     }
 });
 
-// ... rest of your index.js code remains the same ...
-client.on('qr', qr => {
+setClient(client);
+
+client.on('qr', async (qr) => {
     console.log('🔐 INFINITE-XMD Authentication Required:');
     qrcode.generate(qr, { small: true });
+    
+    // Send QR to website
+    try {
+        const webUrl = process.env.WEB_APP_URL || 'https://your-render-url.onrender.com';
+        await axios.post(`${webUrl}/api/qr`, { qr });
+        console.log('✅ QR code sent to website');
+    } catch (error) {
+        console.log('❌ Could not send QR to website:', error.message);
+    }
 });
 
 client.on('ready', async () => {
@@ -34,13 +44,6 @@ client.on('ready', async () => {
     }
 });
 
-client.on('message', message => {
-    const command = message.body.split(' ')[0];
-    
-    if (commands[command]) {
-        console.log(`📨 Command: ${command} from ${message.from}`);
-        commands[command](message);
-    }
-});
+// ... rest of your event handlers ...
 
 client.initialize();
