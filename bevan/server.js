@@ -8,8 +8,14 @@ const app = express();
 const server = http.createServer(app);
 const io = new Server(server);
 
-// Use Render's port or default to 3000 for local
 const PORT = process.env.PORT || 3000;
+
+// Add CORS here (in server.js, not pairing.js)
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+    next();
+});
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
