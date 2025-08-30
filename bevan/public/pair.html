@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pair WhatsApp - INFINITE-XMD</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📱 Pair WhatsApp</h1>
+            <p class="credits">Developed by Bevan Society</p>
+            <a href="index.html" class="back-link">← Back to Home</a>
+        </div>
+        
+        <div class="qr-container">
+            <h2>Scan QR Code to Link WhatsApp</h2>
+            <div id="qrcode"></div>
+            <p id="status">Initializing QR code...</p>
+        </div>
+        
+        <div class="instructions">
+            <h3>📋 How to Pair:</h3>
+            <ol>
+                <li>Open WhatsApp on your phone</li>
+                <li>Tap Menu → Linked Devices</li>
+                <li>Tap Link a Device</li>
+                <li>Scan the QR code above</li>
+                <li>Wait for authentication confirmation</li>
+            </ol>
+        </div>
+        
+        <div class="footer">
+            <p>Need help? <a href="owner.html">Set up notifications</a></p>
+        </div>
+    </div>
+    
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="script.js"></script>
+    <script>
+        // QR-specific code
+        const socket = io();
+        
+        socket.on('connect', () => {
+            console.log('Connected to pairing server');
+            document.getElementById('status').textContent = 'Waiting for QR code...';
+        });
+        
+        socket.on('qr', (qrDataUrl) => {
+            document.getElementById('status').textContent = 'Scan the QR code with WhatsApp';
+            
+            const qrContainer = document.getElementById('qrcode');
+            qrContainer.innerHTML = '';
+            
+            const img = document.createElement('img');
+            img.src = qrDataUrl;
+            img.alt = 'WhatsApp QR Code';
+            img.style.width = '250px';
+            img.style.height = '250px';
+            img.classList.add('qr-image');
+            
+            qrContainer.appendChild(img);
+        });
+        
+        socket.on('authenticated', () => {
+            document.getElementById('status').textContent = '✅ WhatsApp authenticated successfully!';
+            document.getElementById('status').style.color = 'green';
+        });
+        
+        socket.on('ready', () => {
+            document.getElementById('status').textContent = '🤖 INFINITE-XMD is ready!';
+        });
+    </script>
+</body>
+</html>
