@@ -14,8 +14,8 @@
         </div>
 
         <div class="tabs">
-            <button class="tab-btn active" onclick="showTab('qr-tab')">📱 QR Code Pairing</button>
-            <button class="tab-btn" onclick="showTab('manual-tab')">⌨️ Manual Code</button>
+            <button class="tab-btn active" onclick="showTab('qr-tab')">📱 QR Code</button>
+            <button class="tab-btn" onclick="showTab('code-tab')">⌨️ Pairing Code</button>
         </div>
 
         <!-- QR Code Tab -->
@@ -26,7 +26,7 @@
                 <small>Enter your number without + or spaces</small>
             </div>
 
-            <button onclick="startQRPairing()" class="action-btn">🔄 Generate QR Code</button>
+            <button onclick="generateQR()" class="action-btn">🔄 Generate QR Code</button>
 
             <div class="qr-container">
                 <div id="qrcode">
@@ -36,32 +36,29 @@
             </div>
         </div>
 
-        <!-- Manual Code Tab -->
-        <div id="manual-tab" class="tab-content">
+        <!-- Pairing Code Tab -->
+        <div id="code-tab" class="tab-content">
             <div class="input-group">
                 <label>Your WhatsApp Number:</label>
-                <input type="text" id="manualNumber" placeholder="1234567890" pattern="[0-9]{10,15}">
-                <small>We'll send the session directly to this number</small>
+                <input type="text" id="codeNumber" placeholder="1234567890" pattern="[0-9]{10,15}">
+                <small>We'll send pairing code to this number</small>
             </div>
 
-            <button onclick="generateManualSession()" class="action-btn">⚡ Generate Session Now</button>
+            <button onclick="generatePairingCode()" class="action-btn">⚡ Get Pairing Code</button>
 
-            <div id="manualStatus" class="status-message">
-                Enter your number and click generate
-            </div>
-
-            <div class="info-box">
-                <h3>ℹ️ How it works:</h3>
-                <p>We'll temporarily link your number and send you the session ID directly to your WhatsApp.</p>
+            <div id="codeResult" class="result-box">
+                <div id="codeDisplay"></div>
+                <p id="codeStatus">Enter your number and click generate</p>
             </div>
         </div>
 
         <div class="instructions">
-            <h3>📋 What you'll receive:</h3>
+            <h3>📋 How it works:</h3>
             <ul>
-                <li>Your complete WhatsApp session ID</li>
-                <li>Instructions on how to use it</li>
-                <li>Generated instantly to your phone</li>
+                <li>Enter your WhatsApp number</li>
+                <li>Choose QR code or pairing code</li>
+                <li>Session ID will be sent to your WhatsApp</li>
+                <li>Use the session ID in your bot</li>
             </ul>
         </div>
 
@@ -71,88 +68,6 @@
         </div>
     </div>
 
-    <script src="/socket.io/socket.io.js"></script>
-    <script>
-        const socket = io();
-        let currentTab = 'qr-tab';
-
-        function showTab(tabId) {
-            // Hide all tabs
-            document.querySelectorAll('.tab-content').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            document.querySelectorAll('.tab-btn').forEach(btn => {
-                btn.classList.remove('active');
-            });
-            
-            // Show selected tab
-            document.getElementById(tabId).classList.add('active');
-            document.querySelector(`.tab-btn[onclick="showTab('${tabId}')"]`).classList.add('active');
-            currentTab = tabId;
-        }
-
-        function startQRPairing() {
-            const number = document.getElementById('qrNumber').value.trim();
-            if (!number || !/^\d{10,15}$/.test(number)) {
-                alert('Please enter a valid WhatsApp number (10-15 digits)');
-                return;
-            }
-
-            document.getElementById('qrStatus').textContent = 'Generating QR code...';
-            socket.emit('start-pairing', number);
-        }
-
-        function generateManualSession() {
-            const number = document.getElementById('manualNumber').value.trim();
-            if (!number || !/^\d{10,15}$/.test(number)) {
-                alert('Please enter a valid WhatsApp number (10-15 digits)');
-                return;
-            }
-
-            document.getElementById('manualStatus').textContent = 'Generating session...';
-            
-            fetch('/api/generate-session', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ userNumber: number })
-            })
-            .then(response => response.json())
-            .then(data => {
-                document.getElementById('manualStatus').textContent = data.message;
-                if (data.success) {
-                    document.getElementById('manualStatus').style.color = 'green';
-                } else {
-                    document.getElementById('manualStatus').style.color = 'red';
-                }
-            });
-        }
-
-        // Socket events for QR tab
-        socket.on('qr', (qrDataUrl) => {
-            const qrContainer = document.getElementById('qrcode');
-            qrContainer.innerHTML = '';
-            
-            const img = document.createElement('img');
-            img.src = qrDataUrl;
-            img.alt = 'WhatsApp QR Code';
-            img.className = 'qr-image';
-            
-            qrContainer.appendChild(img);
-            document.getElementById('qrStatus').textContent = 'Scan this QR code with WhatsApp';
-        });
-
-        socket.on('authenticated', () => {
-            document.getElementById('qrStatus').textContent = '✅ Authenticated! Check your WhatsApp for session ID';
-            document.getElementById('qrStatus').style.color = 'green';
-        });
-
-        socket.on('ready', () => {
-            document.getElementById('qrStatus').textContent = '✅ Session sent! You can generate another';
-        });
-
-        socket.on('pairing-started', () => {
-            document.getElementById('qrStatus').textContent = 'Starting pairing process...';
-        });
-    </script>
+    <script src="script.js"></script>
 </body>
 </html>
