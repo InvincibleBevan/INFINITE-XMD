@@ -22,16 +22,15 @@
         <div id="qr-tab" class="tab-content active">
             <div class="info-box">
                 <h3>📱 QR Code Pairing</h3>
-                <p>Generate a QR code and scan it with WhatsApp to get your session ID.</p>
+                <p>Generate a QR code and scan it with WhatsApp to get your session ID. No phone number needed!</p>
             </div>
 
             <button onclick="generateQR()" class="action-btn">🔄 Generate QR Code</button>
 
             <div class="qr-container">
                 <div id="qrcode">
-                    <!-- ADD THIS LOADING PLACEHOLDER -->
-                    <div class="qr-placeholder loading" id="qrPlaceholder">
-                        <div style="font-size: 48px; margin-bottom: 15px;">⏳</div>
+                    <div class="qr-placeholder" id="qrPlaceholder">
+                        <div style="font-size: 48px; margin-bottom: 15px;">📱</div>
                         <div>QR code will appear here</div>
                     </div>
                 </div>
@@ -42,70 +41,44 @@
         <!-- Pairing Code Tab -->
         <div id="code-tab" class="tab-content">
             <div class="input-group">
-                <label>Your WhatsApp Number:</label>
+                <label for="codeNumber">Your WhatsApp Number:</label>
                 <input type="text" id="codeNumber" placeholder="254712345678" pattern="[0-9]{10,15}">
-                <small>Include country code without + (e.g., 254712345678)</small>
+                <small>Include country code without + (e.g., 254712345678 for Kenya)</small>
             </div>
 
             <button onclick="generatePairingCode()" class="action-btn">⚡ Get Pairing Code</button>
 
-            <div id="codeResult" class="result-box">
+            <div class="result-box">
                 <div id="codeDisplay"></div>
                 <p id="codeStatus">Enter your number and click generate</p>
+            </div>
+
+            <div class="info-box">
+                <h3>ℹ️ How to Use Pairing Code:</h3>
+                <p>1. Open WhatsApp on your phone<br>
+                2. Go to Settings → Linked Devices<br>
+                3. Tap "Link a Device" → "Link with pairing code"<br>
+                4. Enter the code shown above</p>
             </div>
         </div>
 
         <div class="instructions">
-            <h3>📋 How it works:</h3>
+            <h3>📋 What You'll Receive:</h3>
             <ul>
-                <li>Choose QR code or pairing code method</li>
-                <li>Session ID will be sent to your WhatsApp</li>
-                <li>Use the session ID in your bot</li>
-                <li>Keep your session ID secure</li>
+                <li>Your complete WhatsApp session ID</li>
+                <li>Instructions on how to use it</li>
+                <li>Session delivered to your WhatsApp</li>
+                <li>Secure Base64 format</li>
             </ul>
         </div>
 
         <div class="footer">
             <p>⚡ Powered by Bevan Society Technology</p>
-            <p>🔒 Your sessions are sent only to your WhatsApp</p>
+            <p>🔒 Sessions are sent only to your WhatsApp number</p>
+            <p>🚀 INFINITE-XMD Session Generator</p>
         </div>
     </div>
 
     <script src="script.js"></script>
 </body>
     </html>
-        <!-- Pairing Code Tab -->
-        <div id="code-tab" class="tab-content">
-            <div class="input-group">
-                <label>Your WhatsApp Number:</label>
-                <input type="text" id="codeNumber" placeholder="1234567890" pattern="[0-9]{10,15}">
-                <small>Enter your number without + or spaces</small>
-            </div>
-
-            <button onclick="generatePairingCode()" class="action-btn">⚡ Get Pairing Code</button>
-
-            <div id="codeResult" class="result-box">
-                <div id="codeDisplay"></div>
-                <p id="codeStatus">Enter your number and click generate</p>
-            </div>
-        </div>
-
-        <div class="instructions">
-            <h3>📋 How it works:</h3>
-            <ul>
-                <li>Choose QR code or pairing code method</li>
-                <li>Session ID will be sent to your WhatsApp</li>
-                <li>Use the session ID in your bot</li>
-                <li>Keep your session ID secure</li>
-            </ul>
-        </div>
-
-        <div class="footer">
-            <p>⚡ Powered by Bevan Society Technology</p>
-            <p>🔒 Your sessions are sent only to your WhatsApp</p>
-        </div>
-    </div>
-
-    <script src="script.js"></script>
-</body>
-</html>
