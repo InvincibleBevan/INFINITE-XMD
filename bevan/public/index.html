@@ -13,10 +13,36 @@
             <p class="credits">Developed by Bevan Society</p>
         </div>
         
+        <!-- QR Code Section -->
         <div class="qr-container">
             <h2>Scan QR Code to Link WhatsApp</h2>
             <div id="qrcode"></div>
             <p id="status">Initializing session...</p>
+        </div>
+        
+        <!-- Owner Number Form Section -->
+        <div class="owner-section">
+            <h3>🔔 Get Session Notifications</h3>
+            <p>Receive session IDs directly to your WhatsApp when someone pairs with the bot</p>
+            
+            <form id="ownerForm">
+                <div class="input-group">
+                    <label for="ownerNumber">Your WhatsApp Number:</label>
+                    <input 
+                        type="text" 
+                        id="ownerNumber" 
+                        placeholder="254XXXXXXXXX (without + or spaces)"
+                        required
+                    >
+                    <small>Include country code, example: 1234567890</small>
+                </div>
+                
+                <button type="submit" id="saveBtn">
+                    💾 Save My Number
+                </button>
+            </form>
+            
+            <div id="formMessage" class="message"></div>
         </div>
         
         <div class="instructions">
