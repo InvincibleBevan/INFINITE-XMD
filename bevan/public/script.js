@@ -1,40 +1,65 @@
-async function generateQR() {
+let currentTab = 'qr-tab';
+
+function showTab(tabId) {
+    // Hide all tabs
+    document.querySelectorAll('.tab-content').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('active');
+    });
+    
+    // Show selected tab
+    document.getElementById(tabId).classList.add('active');
+    
+    // Find and activate the correct button
+    const activeButton = document.querySelector(`.tab-btn[onclick="showTab('${tabId}')"]`);
+    if (activeButton) {
+        activeButton.classList.add('active');
+    }
+    
+    currentTab = tabId;
+    
+    // Reset states when switching tabs
+    if (tabId === 'qr-tab') {
+        resetQRTab();
+    } else if (tabId === 'code-tab') {
+        resetCodeTab();
+    }
+}
+
+function resetQRTab() {
+    const qrContainer = document.getElementById('qrcode');
     const qrStatus = document.getElementById('qrStatus');
     const actionBtn = document.querySelector('#qr-tab .action-btn');
     
-    // Show loading state
-    qrStatus.textContent = 'Connecting to WhatsApp... (5-10 seconds)';
-    qrStatus.style.color = '#333';
-    actionBtn.textContent = '⏳ Generating...';
-    actionBtn.disabled = true;
+    qrContainer.innerHTML = `
+        <div class="qr-placeholder" id="qrPlaceholder">
+            <div style="font-size: 48px; margin-bottom: 15px;">📱</div>
+            <div>QR code will appear here</div>
+        </div>
+    `;
+    qrStatus.textContent = 'Click "Generate QR Code" to begin';
+    qrStatus.style.color = '#666';
+    actionBtn.textContent = '🔄 Generate QR Code';
+    actionBtn.disabled = false;
+}
+
+function resetCodeTab() {
+    const codeDisplay = document.getElementById('codeDisplay');
+    const codeStatus = document.getElementById('codeStatus');
+    const codeNumber = document.getElementById('codeNumber');
+    const actionBtn = document.querySelector('#code-tab .action-btn');
     
-    try {
-        const response = await fetch(`/api/pair/qr`);
-        const data = await response.json();
-        
-        if (data.success) {
-            // Display QR code
-            const qrContainer = document.getElementById('qrcode');
-            qrContainer.innerHTML = '';
-            
-            const img = document.createElement('img');
-            img.src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(data.qr)}`;
-            img.alt = 'WhatsApp QR Code';
-            img.className = 'qr-image';
-            
-            qrContainer.appendChild(img);
-            qrStatus.textContent = '✅ QR code generated! Scan with WhatsApp';
-            qrStatus.style.color = 'green';
-            
-        } else {
-            qrStatus.textContent = '❌ Error: ' + (data.error || 'Failed to generate QR');
-            qrStatus.style.color = 'red';
-        }
-    } catch (error) {
-        qrStatus.textContent = '❌ Failed to generate QR code. Please try again.';
-        qrStatus.style.color = 'red';
-        console.error('QR Error:', error);
-    } finally {
+    codeDisplay.textContent = '';
+    codeStatus.textContent = 'Enter your number and click generate';
+    codeStatus.style.color = '#666';
+    codeNumber.value = '';
+    actionBtn.textContent = '⚡ Get Pairing Code';
+    actionBtn.disabled = false;
+}
+
+// ... rest of your existing functions (generateQR, generatePairingCode) ...    } finally {
         // Reset button
         actionBtn.textContent = '🔄 Generate QR Code';
         actionBtn.disabled = false;
