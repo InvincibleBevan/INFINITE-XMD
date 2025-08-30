@@ -27,3 +27,10 @@ server.listen(PORT, () => {
     console.log('📱 Base64 Session + Baileys Pairing');
     console.log('🚀 Ready for pairing codes and QR codes');
 });
+
+// Add CORS support
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+    next();
+});
