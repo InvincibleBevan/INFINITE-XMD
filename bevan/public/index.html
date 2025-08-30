@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>INFINITE-XMD Session Link - Developed by Bevan Society</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 INFINITE-XMD</h1>
+            <p class="credits">Developed by Bevan Society</p>
+        </div>
+        
+        <div class="qr-container">
+            <h2>Scan QR Code to Link WhatsApp</h2>
+            <div id="qrcode"></div>
+            <p id="status">Initializing session...</p>
+        </div>
+        
+        <div class="instructions">
+            <h3>📋 How to Connect:</h3>
+            <ol>
+                <li>Open WhatsApp on your phone</li>
+                <li>Tap Menu → Linked Devices</li>
+                <li>Tap Link a Device</li>
+                <li>Scan the QR code above</li>
+                <li>Wait for authentication confirmation</li>
+            </ol>
+        </div>
+        
+        <div class="footer">
+            <p>⚡ Powered by Bevan Society Technology</p>
+        </div>
+    </div>
+    
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
