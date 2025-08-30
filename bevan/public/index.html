@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>INFINITE-XMD Session Link - Developed by Bevan Society</title>
+    <title>INFINITE-XMD - Developed by Bevan Society</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -13,47 +13,20 @@
             <p class="credits">Developed by Bevan Society</p>
         </div>
         
-        <!-- QR Code Section -->
-        <div class="qr-container">
-            <h2>Scan QR Code to Link WhatsApp</h2>
-            <div id="qrcode"></div>
-            <p id="status">Initializing session...</p>
-        </div>
-        
-        <!-- Owner Number Form Section -->
-        <div class="owner-section">
-            <h3>🔔 Get Session Notifications</h3>
-            <p>Receive session IDs directly to your WhatsApp when someone pairs with the bot</p>
+        <div class="navigation">
+            <div class="nav-card" onclick="window.location.href='pair.html'">
+                <div class="nav-icon">📱</div>
+                <h3>Pair WhatsApp</h3>
+                <p>Scan QR code to connect your WhatsApp account</p>
+                <button class="nav-btn">Go to Pairing →</button>
+            </div>
             
-            <form id="ownerForm">
-                <div class="input-group">
-                    <label for="ownerNumber">Your WhatsApp Number:</label>
-                    <input 
-                        type="text" 
-                        id="ownerNumber" 
-                        placeholder="254XXXXXXXXX (without + or spaces)"
-                        required
-                    >
-                    <small>Include country code, example: 1234567890</small>
-                </div>
-                
-                <button type="submit" id="saveBtn">
-                    💾 Save My Number
-                </button>
-            </form>
-            
-            <div id="formMessage" class="message"></div>
-        </div>
-        
-        <div class="instructions">
-            <h3>📋 How to Connect:</h3>
-            <ol>
-                <li>Open WhatsApp on your phone</li>
-                <li>Tap Menu → Linked Devices</li>
-                <li>Tap Link a Device</li>
-                <li>Scan the QR code above</li>
-                <li>Wait for authentication confirmation</li>
-            </ol>
+            <div class="nav-card" onclick="window.location.href='owner.html'">
+                <div class="nav-icon">🔔</div>
+                <h3>Owner Setup</h3>
+                <p>Register your number to receive session notifications</p>
+                <button class="nav-btn">Go to Setup →</button>
+            </div>
         </div>
         
         <div class="footer">
@@ -61,7 +34,6 @@
         </div>
     </div>
     
-    <script src="/socket.io/socket.io.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
