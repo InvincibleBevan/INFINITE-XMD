@@ -16,17 +16,12 @@ function showTab(tabId) {
 }
 
 async function generateQR() {
-    const number = document.getElementById('qrNumber').value.trim();
-    if (!number || !/^\d{10,15}$/.test(number)) {
-        alert('Please enter a valid WhatsApp number (10-15 digits)');
-        return;
-    }
-
+    // NO phone number needed for QR code!
     document.getElementById('qrStatus').textContent = 'Generating QR code...';
     document.getElementById('qrStatus').style.color = '#333';
     
     try {
-        const response = await fetch(`/api/pair/qr?number=${number}`);
+        const response = await fetch(`/api/pair/qr`);
         const data = await response.json();
         
         if (data.success) {
@@ -98,14 +93,7 @@ async function generatePairingCode() {
 
 // Add event listeners for Enter key
 document.addEventListener('DOMContentLoaded', function() {
-    // Add Enter key support for QR tab
-    document.getElementById('qrNumber').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            generateQR();
-        }
-    });
-    
-    // Add Enter key support for code tab
+    // Add Enter key support for code tab only (QR doesn't need number)
     document.getElementById('codeNumber').addEventListener('keypress', function(e) {
         if (e.key === 'Enter') {
             generatePairingCode();
