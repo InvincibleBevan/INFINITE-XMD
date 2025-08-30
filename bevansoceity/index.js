@@ -7,14 +7,16 @@ const { updateBio } = require('./autobio');
 console.log('🚀 Starting INFINITE-XMD WhatsApp Bot...');
 console.log('💻 Developed by Bevan Society');
 
+// Create client with auth strategy that receives client reference
 const client = new Client({
-    authStrategy: new Base64AuthStrategy(),
+    authStrategy: new Base64AuthStrategy(client), // Pass client to auth
     puppeteer: {
         args: ['--no-sandbox', '--disable-setuid-sandbox'],
         headless: true
     }
 });
 
+// ... rest of your index.js code remains the same ...
 client.on('qr', qr => {
     console.log('🔐 INFINITE-XMD Authentication Required:');
     qrcode.generate(qr, { small: true });
