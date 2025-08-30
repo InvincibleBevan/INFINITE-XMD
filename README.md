@@ -3,7 +3,7 @@
 **Advanced WhatsApp Automation Solution**  
 *Developed by Bevan Society*
 
-![INFINITE-XMD Banner](https://via.placeholder.com/800x200/667eea/white?text=INFINITE-XMD+BOT)
+![INFINITE-XMD Banner](blob:https://web.whatsapp.com/1f4f2ac1-bf77-4418-8396-8f27c1c51f34)
 *Project Banner - Developed by Bevan Society*
 
 ## 🌐 Live Deployments
