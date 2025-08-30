@@ -23,13 +23,14 @@ async function generateQR() {
     }
 
     document.getElementById('qrStatus').textContent = 'Generating QR code...';
+    document.getElementById('qrStatus').style.color = '#333';
     
     try {
         const response = await fetch(`/api/pair/qr?number=${number}`);
         const data = await response.json();
         
         if (data.success) {
-            // Display QR code
+            // Display QR code using the actual QR data from Baileys
             const qrContainer = document.getElementById('qrcode');
             qrContainer.innerHTML = '';
             
@@ -40,11 +41,15 @@ async function generateQR() {
             
             qrContainer.appendChild(img);
             document.getElementById('qrStatus').textContent = 'Scan this QR code with WhatsApp';
+            document.getElementById('qrStatus').style.color = 'green';
         } else {
-            document.getElementById('qrStatus').textContent = 'Error: ' + data.error;
+            document.getElementById('qrStatus').textContent = 'Error: ' + (data.error || 'Failed to generate QR');
+            document.getElementById('qrStatus').style.color = 'red';
         }
     } catch (error) {
-        document.getElementById('qrStatus').textContent = 'Failed to generate QR code';
+        document.getElementById('qrStatus').textContent = 'Failed to generate QR code. Please try again.';
+        document.getElementById('qrStatus').style.color = 'red';
+        console.error('QR Error:', error);
     }
 }
 
@@ -55,19 +60,55 @@ async function generatePairingCode() {
         return;
     }
 
-    document.getElementById('codeStatus').textContent = 'Generating pairing code...';
+    const codeDisplay = document.getElementById('codeDisplay');
+    const codeStatus = document.getElementById('codeStatus');
+    
+    codeStatus.textContent = 'Requesting pairing code...';
+    codeStatus.style.color = '#333';
+    codeDisplay.textContent = '';
     
     try {
         const response = await fetch(`/api/pair/code?number=${number}`);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const data = await response.json();
         
         if (data.success) {
-            document.getElementById('codeDisplay').textContent = data.code;
-            document.getElementById('codeStatus').textContent = 'Use this code in WhatsApp → Linked Devices';
+            codeDisplay.textContent = data.code;
+            codeStatus.textContent = 'Use this code in WhatsApp → Linked Devices → Link with pairing code';
+            codeStatus.style.color = 'green';
+            
+            // Auto-format the code if it's in XXXXX-XXXX format
+            if (data.code && data.code.includes('-')) {
+                codeDisplay.innerHTML = `<span style="font-size: 32px; letter-spacing: 2px;">${data.code}</span>`;
+            }
         } else {
-            document.getElementById('codeStatus').textContent = 'Error: ' + data.error;
+            codeStatus.textContent = 'Error: ' + (data.error || 'Failed to generate code');
+            codeStatus.style.color = 'red';
         }
     } catch (error) {
-        document.getElementById('codeStatus').textContent = 'Failed to generate pairing code';
+        codeStatus.textContent = 'Failed to generate pairing code. Please try again.';
+        codeStatus.style.color = 'red';
+        console.error('Pairing Code Error:', error);
     }
 }
+
+// Add event listeners for Enter key
+document.addEventListener('DOMContentLoaded', function() {
+    // Add Enter key support for QR tab
+    document.getElementById('qrNumber').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            generateQR();
+        }
+    });
+    
+    // Add Enter key support for code tab
+    document.getElementById('codeNumber').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            generatePairingCode();
+        }
+    });
+});
