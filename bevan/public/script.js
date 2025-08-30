@@ -1,40 +1,45 @@
-async function generatePairingCode() {
-    const number = document.getElementById('codeNumber').value.trim();
-    if (!number || !/^\d{10,15}$/.test(number)) {
-        alert('Please enter a valid WhatsApp number (10-15 digits). Include country code without + (e.g., 254712345678)');
-        return;
-    }
-
-    const codeDisplay = document.getElementById('codeDisplay');
-    const codeStatus = document.getElementById('codeStatus');
+async function generateQR() {
+    const qrStatus = document.getElementById('qrStatus');
+    const actionBtn = document.querySelector('#qr-tab .action-btn');
     
-    codeStatus.textContent = 'Requesting pairing code from WhatsApp...';
-    codeStatus.style.color = '#333';
-    codeDisplay.textContent = '';
+    // Show loading state
+    qrStatus.textContent = 'Connecting to WhatsApp... (5-10 seconds)';
+    qrStatus.style.color = '#333';
+    actionBtn.textContent = '⏳ Generating...';
+    actionBtn.disabled = true;
     
     try {
-        const response = await fetch(`/api/pair/code?number=${number}`);
-        
-        if (!response.ok) {
-            throw new Error(`Server error: ${response.status}`);
-        }
-        
+        const response = await fetch(`/api/pair/qr`);
         const data = await response.json();
         
         if (data.success) {
-            codeDisplay.textContent = data.code;
-            codeStatus.innerHTML = `
-                ✅ <strong>Pairing code generated!</strong><br>
-                📱 <strong>How to use:</strong><br>
-                1. Open WhatsApp<br>
-                2. Go to Menu → Linked Devices<br>
-                3. Tap "Link with pairing code"<br>
-                4. Enter this code: <strong>${data.code}</strong>
-            `;
-            codeStatus.style.color = 'green';
+            // Display QR code
+            const qrContainer = document.getElementById('qrcode');
+            qrContainer.innerHTML = '';
+            
+            const img = document.createElement('img');
+            img.src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(data.qr)}`;
+            img.alt = 'WhatsApp QR Code';
+            img.className = 'qr-image';
+            
+            qrContainer.appendChild(img);
+            qrStatus.textContent = '✅ QR code generated! Scan with WhatsApp';
+            qrStatus.style.color = 'green';
             
         } else {
-            codeStatus.innerHTML = `❌ Error: ${data.error || 'Failed to generate code'}<br>💡 Tip: ${data.tip || 'Try using full number with country code'}`;
+            qrStatus.textContent = '❌ Error: ' + (data.error || 'Failed to generate QR');
+            qrStatus.style.color = 'red';
+        }
+    } catch (error) {
+        qrStatus.textContent = '❌ Failed to generate QR code. Please try again.';
+        qrStatus.style.color = 'red';
+        console.error('QR Error:', error);
+    } finally {
+        // Reset button
+        actionBtn.textContent = '🔄 Generate QR Code';
+        actionBtn.disabled = false;
+    }
+        }            codeStatus.innerHTML = `❌ Error: ${data.error || 'Failed to generate code'}<br>💡 Tip: ${data.tip || 'Try using full number with country code'}`;
             codeStatus.style.color = 'red';
         }
     } catch (error) {
