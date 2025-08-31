@@ -1,89 +1,111 @@
-<!-- Replace your entire pairing code generator section with this -->
-
-<!-- Pairing Code Generator -->
-<div id="code-generator" class="generator-content hidden">
-    <div class="generator-header">
-        <h3>⌨️ Pairing Code Generator</h3>
-        <button onclick="hideGenerators()" class="back-btn">← Back to options</button>
-    </div>
-    
-    <div class="generator-body">
-        <!-- Attractive Input Section -->
-        <div class="attractive-input">
-            <label class="input-label">📱 Your WhatsApp Number</label>
-            <div style="position: relative;">
-                <span class="input-icon">📞</span>
-                <input 
-                    type="text" 
-                    id="codeNumber" 
-                    placeholder="254712345678" 
-                    pattern="[0-9]{10,15}"
-                    onkeypress="return event.charCode >= 48 && event.charCode <= 57"
-                >
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>INFINITE-XMD - WhatsApp Session Generator</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-logo">
+                <h2>🤖 INFINITE-XMD</h2>
             </div>
-            <span class="input-hint">Include country code without + (e.g., 254712345678 for Kenya)</span>
+            <div class="nav-links">
+                <a href="#home">Home</a>
+                <a href="#generator">Generator</a>
+                <a href="#about">About</a>
+            </div>
         </div>
+    </nav>
 
-        <button onclick="generatePairingCode()" class="btn-primary large-btn">
-            ⚡ Generate Pairing Code
-        </button>
+    <!-- Hero Section -->
+    <section id="home" class="hero">
+        <div class="hero-content">
+            <h1>WhatsApp Session Generator</h1>
+            <p>Create secure session IDs for your WhatsApp automation needs</p>
+            <button onclick="scrollToSection('generator')" class="btn-primary">Get Started</button>
+        </div>
+    </section>
 
-        <!-- Copy to Clipboard Section -->
-        <div id="copySection" class="copy-section hidden">
-            <h3 style="color: white; margin-bottom: 1rem;">✅ Pairing Code Generated!</h3>
+    <!-- Generator Section -->
+    <section id="generator" class="generator">
+        <div class="container">
+            <h2>Choose Your Method</h2>
+            <p class="section-subtitle">Select how you want to generate your session ID</p>
             
-            <div class="code-display">
-                <div style="font-size: 1.1rem; color: #718096; margin-bottom: 0.5rem;">Your pairing code:</div>
-                <div id="pairingCode" class="pairing-code">Waiting for code...</div>
-                <div style="font-size: 0.9rem; color: #a0aec0; margin-top: 0.5rem;">
-                    Expires in <span id="countdown">2:00</span>
+            <div class="generator-options">
+                <div class="option-card" onclick="showGenerator('qr')">
+                    <div class="option-icon">📱</div>
+                    <h3>QR Code</h3>
+                    <p>Scan QR code with your WhatsApp camera</p>
+                    <button class="option-btn">Use QR Code</button>
+                </div>
+
+                <div class="option-card" onclick="showGenerator('code')">
+                    <div class="option-icon">⌨️</div>
+                    <h3>Pairing Code</h3>
+                    <p>Enter pairing code in WhatsApp settings</p>
+                    <button class="option-btn">Use Pairing Code</button>
                 </div>
             </div>
 
-            <button onclick="copyToClipboard()" class="copy-btn" id="copyBtn">
-                📋 Copy to Clipboard
-            </button>
+            <!-- QR Code Generator -->
+            <div id="qr-generator" class="generator-content hidden">
+                <div class="generator-header">
+                    <h3>📱 QR Code Generator</h3>
+                    <button onclick="hideGenerators()" class="back-btn">← Back</button>
+                </div>
+                <div class="generator-body">
+                    <button onclick="generateQR()" class="btn-primary">Generate QR Code</button>
+                    <div class="qr-container">
+                        <div id="qrcode">
+                            <div class="qr-placeholder">QR code will appear here</div>
+                        </div>
+                        <p id="qrStatus">Click generate to create QR code</p>
+                    </div>
+                </div>
+            </div>
 
-            <div style="margin-top: 1rem; color: rgba(255, 255, 255, 0.9); font-size: 0.9rem;">
-                Code will auto-copy in <span id="autoCopyCountdown">3</span> seconds...
+            <!-- Pairing Code Generator -->
+            <div id="code-generator" class="generator-content hidden">
+                <div class="generator-header">
+                    <h3>⌨️ Pairing Code Generator</h3>
+                    <button onclick="hideGenerators()" class="back-btn">← Back</button>
+                </div>
+                <div class="generator-body">
+                    <div class="input-group">
+                        <label>Your WhatsApp Number:</label>
+                        <input type="text" id="codeNumber" placeholder="254712345678">
+                        <small>With country code, no + sign</small>
+                    </div>
+                    <button onclick="generatePairingCode()" class="btn-primary">Generate Pairing Code</button>
+                    <div class="result-box">
+                        <div id="codeDisplay"></div>
+                        <p id="codeStatus">Enter your number and click generate</p>
+                    </div>
+                </div>
             </div>
         </div>
+    </section>
 
-        <!-- Status Message -->
-        <div id="codeStatus" class="status-message hidden"></div>
-
-        <!-- Instructions Grid -->
-        <div class="instructions-grid">
-            <div class="instruction-step">
-                <div class="step-number">1</div>
-                <h4>Enter Number</h4>
-                <p>Type your WhatsApp number with country code</p>
-            </div>
-            
-            <div class="instruction-step">
-                <div class="step-number">2</div>
-                <h4>Get Code</h4>
-                <p>Click generate to receive your pairing code</p>
-            </div>
-            
-            <div class="instruction-step">
-                <div class="step-number">3</div>
-                <h4>Use in WhatsApp</h4>
-                <p>Go to Linked Devices → Link with pairing code</p>
-            </div>
-            
-            <div class="instruction-step">
-                <div class="step-number">4</div>
-                <h4>Receive Session</h4>
-                <p>Get your session ID directly on WhatsApp</p>
-            </div>
+    <!-- About Section -->
+    <section id="about" class="about">
+        <div class="container">
+            <h2>About INFINITE-XMD</h2>
+            <p>Developed by Bevan Society - Professional WhatsApp session generation</p>
         </div>
+    </section>
 
-        <!-- Quick Help -->
-        <div class="info-box">
-            <h4>💡 Need help with country codes?</h4>
-            <p>Kenya: 254... | Nigeria: 234... | US: 1... | UK: 44...<br>
-            Remove the + sign and leading zero from your number</p>
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2024 Bevan Society. All rights reserved.</p>
         </div>
-    </div>
-</div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+                                </html>
