@@ -3,10 +3,9 @@
  * Branded with ❤️ for Bevan Soceity
  *
  * Deploy this on Render:
- * - Shows QR in logs (for local login)
- * - Supports Pairing Code login (for headless servers)
- * - After login, sends Base64 session (prefixed INFINITY~) 
- *   directly to the user’s WhatsApp in chunks
+ * - Supports QR & Pairing login.
+ * - Sends session (prefixed INFINITY~) to user's WhatsApp.
+ * - Now includes a friendly homepage at '/'
  */
 
 const express = require('express');
@@ -20,7 +19,25 @@ const SESSION_DIR = path.join(__dirname, 'auth_info_baileys');
 const app = express();
 app.use(express.json());
 
-// Healthcheck
+// Home page
+app.get('/', (req, res) => {
+  res.send(`
+    <div style="font-family: sans-serif; margin: 2rem;">
+      <h1>🚀 INFINITE-XMD Session Server</h1>
+      <p>This service generates WhatsApp <strong>Base64 session IDs</strong>—sent directly to your WhatsApp (prefixed with <strong>INFINITY~</strong>).</p>
+      <p>To use this app:</p>
+      <ul>
+        <li>Scan the QR code from the logs, or</li>
+        <li>IfWA_PHONE_NUMBER is set, use the pairing code shown in the logs.</li>
+      </ul>
+      <p>Once logged in, your session will be sent in parts via WhatsApp.</p>
+      <p>Powered by <strong>Bevan Soceity</strong> ✨</p>
+      <p>Need help? <a href="https://wa.me/254797827405">Contact Support</a></p>
+    </div>
+  `);
+});
+
+// Health check
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 
 async function startSessionServer() {
@@ -34,7 +51,6 @@ async function startSessionServer() {
     version
   });
 
-  // If creds not registered, try pairing code
   if (!sock.authState.creds.registered) {
     const phoneNumber = process.env.WA_PHONE_NUMBER;
     if (phoneNumber) {
@@ -45,7 +61,6 @@ async function startSessionServer() {
     }
   }
 
-  // When session updates → save and send to user
   sock.ev.on('creds.update', async () => {
     await saveCreds();
 
@@ -53,38 +68,27 @@ async function startSessionServer() {
       const creds = sock.authState.creds;
       const data = JSON.stringify(creds);
       let base64 = Buffer.from(data).toString('base64');
-
-      // Add INFINITY~ prefix
       base64 = "INFINITY~" + base64;
 
       const me = sock.user;
-      if (!me || !me.id) {
-        console.log('❌ Could not determine logged-in user JID');
+      if (!me?.id) {
+        console.log('❌ Could not get user JID');
         return;
       }
 
-      // Send welcome + instructions
       await sock.sendMessage(me.id, {
         text: `✨ *INFINITE-XMD Session Generated!* ✨\n\n` +
-              `🔐 Your secure session ID has been created.\n\n` +
-              `📌 *How to use it:*\n` +
-              `1️⃣ Copy the full session below (all parts).\n` +
-              `2️⃣ Go to your Heroku app → *Config Vars*.\n` +
-              `3️⃣ Add a new variable named *SESSION_ID*.\n` +
-              `4️⃣ Paste the copied session as its value.\n\n` +
-              `✅ Done! Restart your Heroku app and your bot will run instantly.\n\n` +
-              `💡 Powered by *Bevan Soceity*.\n` +
-              `📞 Contact support: wa.me/254797827405\n\n` +
-              `⚠️ *Keep your session private* – do not share it with anyone.`
+              `Your secure session ID below:\n- Copy all parts.\n- Go to your Heroku app → *Config Vars*.\n- Add as *SESSION_ID*.\n\n` +
+              `Powered by *Bevan Soceity*.\n` +
+              `Support: wa.me/254797827405\n` +
+              `Keep this session private!`
       });
 
-      // Split session into chunks
-      const chunkSize = 3900; // safe limit
-      const chunks = base64.match(new RegExp(`.{1,${chunkSize}}`, 'g'));
-
+      const chunks = base64.match(/.{1,3900}/g);
       for (let i = 0; i < chunks.length; i++) {
-        const part = `📦 *Session Part ${i + 1}/${chunks.length}:*\n\n${chunks[i]}`;
-        await sock.sendMessage(me.id, { text: part });
+        await sock.sendMessage(me.id, {
+          text: `📦 Session Part ${i+1}/${chunks.length}:\n\n${chunks[i]}`
+        });
       }
 
       console.log(`✅ Session sent to ${me.id} in ${chunks.length} parts`);
@@ -95,4 +99,4 @@ async function startSessionServer() {
 }
 
 startSessionServer();
-app.listen(PORT, () => console.log(`🚀 Session server running on ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Session server running on port ${PORT}`));
