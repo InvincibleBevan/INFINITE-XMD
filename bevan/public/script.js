@@ -1,140 +1,137 @@
-let currentTab = 'qr-tab';
-
-function showTab(tabId) {
-    // Hide all tabs
-    document.querySelectorAll('.tab-content').forEach(tab => {
-        tab.classList.remove('active');
-    });
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.classList.remove('active');
-    });
-    
-    // Show selected tab
-    document.getElementById(tabId).classList.add('active');
-    
-    // Find and activate the correct button
-    const activeButton = document.querySelector(`.tab-btn[onclick="showTab('${tabId}')"]`);
-    if (activeButton) {
-        activeButton.classList.add('active');
-    }
-    
-    currentTab = tabId;
-    
-    // Reset states when switching tabs
-    if (tabId === 'qr-tab') {
-        resetQRTab();
-    } else if (tabId === 'code-tab') {
-        resetCodeTab();
+// Smooth scrolling for navigation
+function scrollToSection(sectionId) {
+    const section = document.getElementById(sectionId);
+    if (section) {
+        section.scrollIntoView({ behavior: 'smooth' });
     }
 }
 
-function resetQRTab() {
-    const qrContainer = document.getElementById('qrcode');
+// Show/hide generators
+function showGenerator(type) {
+    // Hide all generator contents
+    document.querySelectorAll('.generator-content').forEach(content => {
+        content.classList.add('hidden');
+    });
+    
+    // Hide options
+    document.querySelector('.generator-options').classList.add('hidden');
+    
+    // Show selected generator
+    const generator = document.getElementById(`${type}-generator`);
+    if (generator) {
+        generator.classList.remove('hidden');
+    }
+}
+
+function hideGenerators() {
+    // Hide all generators
+    document.querySelectorAll('.generator-content').forEach(content => {
+        content.classList.add('hidden');
+    });
+    
+    // Show options
+    document.querySelector('.generator-options').classList.remove('hidden');
+}
+
+// Generate QR Code
+async function generateQR() {
     const qrStatus = document.getElementById('qrStatus');
-    const actionBtn = document.querySelector('#qr-tab .action-btn');
+    const qrPlaceholder = document.getElementById('qrPlaceholder');
+    const actionBtn = document.querySelector('#qr-generator .large-btn');
     
-    qrContainer.innerHTML = `
-        <div class="qr-placeholder" id="qrPlaceholder">
-            <div style="font-size: 48px; margin-bottom: 15px;">📱</div>
-            <div>QR code will appear here</div>
-        </div>
-    `;
-    qrStatus.textContent = 'Click "Generate QR Code" to begin';
-    qrStatus.style.color = '#666';
-    actionBtn.textContent = '🔄 Generate QR Code';
-    actionBtn.disabled = false;
-}
-
-function resetCodeTab() {
-    const codeDisplay = document.getElementById('codeDisplay');
-    const codeStatus = document.getElementById('codeStatus');
-    const codeNumber = document.getElementById('codeNumber');
-    const actionBtn = document.querySelector('#code-tab .action-btn');
+    // Show loading state
+    qrStatus.textContent = 'Connecting to WhatsApp servers... (5-10 seconds)';
+    qrStatus.style.color = '#333';
+    actionBtn.textContent = '⏳ Generating...';
+    actionBtn.disabled = true;
+    qrPlaceholder.classList.add('loading');
     
-    codeDisplay.textContent = '';
-    codeStatus.textContent = 'Enter your number and click generate';
-    codeStatus.style.color = '#666';
-    codeNumber.value = '';
-    actionBtn.textContent = '⚡ Get Pairing Code';
-    actionBtn.disabled = false;
-}
-
-// ... rest of your existing functions (generateQR, generatePairingCode) ...    } finally {
-        // Reset button
+    try {
+        const response = await fetch('/api/pair/qr');
+        const data = await response.json();
+        
+        if (data.success) {
+            // Display QR code
+            const qrContainer = document.getElementById('qrcode');
+            qrContainer.innerHTML = '';
+            
+            const img = document.createElement('img');
+            img.src = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(data.qr)}`;
+            img.alt = 'WhatsApp QR Code';
+            img.className = 'qr-image';
+            
+            qrContainer.appendChild(img);
+            qrStatus.textContent = '✅ QR code generated! Scan with WhatsApp → Linked Devices';
+            qrStatus.style.color = 'green';
+            
+        } else {
+            qrStatus.textContent = '❌ Error: ' + (data.error || 'Failed to generate QR');
+            qrStatus.style.color = 'red';
+        }
+    } catch (error) {
+        qrStatus.textContent = '❌ Failed to generate QR code. Please try again.';
+        qrStatus.style.color = 'red';
+        console.error('QR Error:', error);
+    } finally {
         actionBtn.textContent = '🔄 Generate QR Code';
         actionBtn.disabled = false;
-    }
-        }            codeStatus.innerHTML = `❌ Error: ${data.error || 'Failed to generate code'}<br>💡 Tip: ${data.tip || 'Try using full number with country code'}`;
-            codeStatus.style.color = 'red';
-        }
-    } catch (error) {
-        codeStatus.innerHTML = '❌ Failed to generate pairing code. Please try again.<br>💡 Make sure to use full number with country code (e.g., 254712345678)';
-        codeStatus.style.color = 'red';
-        console.error('Pairing Code Error:', error);
-    }
-}            qrContainer.appendChild(img);
-            document.getElementById('qrStatus').textContent = 'Scan this QR code with WhatsApp';
-            document.getElementById('qrStatus').style.color = 'green';
-        } else {
-            document.getElementById('qrStatus').textContent = 'Error: ' + (data.error || 'Failed to generate QR');
-            document.getElementById('qrStatus').style.color = 'red';
-        }
-    } catch (error) {
-        document.getElementById('qrStatus').textContent = 'Failed to generate QR code. Please try again.';
-        document.getElementById('qrStatus').style.color = 'red';
-        console.error('QR Error:', error);
+        qrPlaceholder.classList.remove('loading');
     }
 }
 
+// Generate Pairing Code
 async function generatePairingCode() {
     const number = document.getElementById('codeNumber').value.trim();
     if (!number || !/^\d{10,15}$/.test(number)) {
-        alert('Please enter a valid WhatsApp number (10-15 digits)');
+        alert('Please enter a valid WhatsApp number (10-15 digits). Include country code without + (e.g., 254712345678)');
         return;
     }
 
     const codeDisplay = document.getElementById('codeDisplay');
     const codeStatus = document.getElementById('codeStatus');
+    const actionBtn = document.querySelector('#code-generator .large-btn');
     
-    codeStatus.textContent = 'Requesting pairing code...';
+    codeStatus.innerHTML = '🔄 Contacting WhatsApp servers... (10-20 seconds)';
     codeStatus.style.color = '#333';
     codeDisplay.textContent = '';
+    actionBtn.textContent = '⏳ Generating...';
+    actionBtn.disabled = true;
     
     try {
-        const response = await fetch(`/api/pair/code?number=${number}`);
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
+        const response = await fetch(`/api/pair/code?number=${encodeURIComponent(number)}`);
         const data = await response.json();
         
         if (data.success) {
             codeDisplay.textContent = data.code;
-            codeStatus.textContent = 'Use this code in WhatsApp → Linked Devices → Link with pairing code';
+            codeStatus.innerHTML = '✅ Pairing code generated! Use it in WhatsApp → Linked Devices → Link with pairing code';
             codeStatus.style.color = 'green';
             
-            // Auto-format the code if it's in XXXXX-XXXX format
-            if (data.code && data.code.includes('-')) {
-                codeDisplay.innerHTML = `<span style="font-size: 32px; letter-spacing: 2px;">${data.code}</span>`;
-            }
         } else {
-            codeStatus.textContent = 'Error: ' + (data.error || 'Failed to generate code');
+            codeStatus.innerHTML = `❌ Error: ${data.error || 'Failed to generate code'}<br>💡 Tip: ${data.tip || 'Try using full number with country code'}`;
             codeStatus.style.color = 'red';
         }
     } catch (error) {
-        codeStatus.textContent = 'Failed to generate pairing code. Please try again.';
+        codeStatus.innerHTML = '❌ Failed to generate pairing code. Please try again.';
         codeStatus.style.color = 'red';
         console.error('Pairing Code Error:', error);
+    } finally {
+        actionBtn.textContent = '⚡ Generate Pairing Code';
+        actionBtn.disabled = false;
     }
 }
 
-// Add event listeners for Enter key
+// Initialize
 document.addEventListener('DOMContentLoaded', function() {
-    // Add Enter key support for code tab only (QR doesn't need number)
-    document.getElementById('codeNumber').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            generatePairingCode();
-        }
+    console.log('INFINITE-XMD Website Loaded');
+    
+    // Add smooth scrolling to all nav links
+    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+        anchor.addEventListener('click', function (e) {
+            e.preventDefault();
+            const target = document.querySelector(this.getAttribute('href'));
+            if (target) {
+                target.scrollIntoView({ behavior: 'smooth' });
+            }
+        });
     });
 });
