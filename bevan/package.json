@@ -1,7 +1,7 @@
 {
-  "name": "infinite-xmd-pairing",
+  "name": "infinite-xmd-website",
   "version": "1.0.0",
-  "description": "Base64 Session Pairing with Baileys - Developed by Bevan Society",
+  "description": "INFINITE-XMD WhatsApp Session Generator - Developed by Bevan Society",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -11,7 +11,9 @@
     "express": "^4.18.2",
     "socket.io": "^4.7.2",
     "@whiskeysockets/baileys": "^6.4.0",
-    "pino": "^8.15.0",
-    "uuid": "^9.0.1"
+    "pino": "^8.15.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }
