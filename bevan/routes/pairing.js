@@ -1,182 +1,87 @@
 const express = require('express');
-const fs = require('fs');
-const path = require('path');
-const pino = require("pino");
-const {
-    default: makeWASocket,
-    useMultiFileAuthState,
-    delay,
-    makeCacheableSignalKeyStore,
-    Browsers
-} = require("@whiskeysockets/baileys");
-
+const { Client } = require('whatsapp-web.js');
+const qrcode = require('qrcode');
 const router = express.Router();
 
-// Global variables for SINGLE persistent connection
-let qrGeneratorClient = null;
-let currentQR = null;
-let qrResolveFunction = null;
-let isQRReady = false;
+// Store session - For Render, we will log the Base64 session to the console.
+let storedSession = null;
 
-// Initialize the persistent QR generator
-async function initializeQRGenerator() {
-    const tempDir = path.join(__dirname, 'temp', 'qr_generator');
-    fs.mkdirSync(tempDir, { recursive: true });
-
-    const { state, saveCreds } = await useMultiFileAuthState(tempDir);
-
-    qrGeneratorClient = makeWASocket({
-        auth: {
-            creds: state.creds,
-            keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "fatal" })),
-        },
-        printQRInTerminal: false,
-        logger: pino({ level: "fatal" }),
-        browser: Browsers.macOS("Safari"),
-        shouldSyncHistoryMessage: () => false,
-        syncFullHistory: false,
-        markOnlineOnConnect: false
-    });
-
-    qrGeneratorClient.ev.on('creds.update', saveCreds);
-
-    qrGeneratorClient.ev.on("connection.update", (update) => {
-        const { connection, qr } = update;
-
-        if (qr) {
-            currentQR = qr;
-            isQRReady = true;
-            // If someone is waiting for a QR, send it immediately
-            if (qrResolveFunction) {
-                qrResolveFunction(qr);
-                qrResolveFunction = null;
-            }
-        }
-
-        if (connection === 'open') {
-            // After connection, reset for next QR
-            setTimeout(() => {
-                qrGeneratorClient.ws.close();
-                initializeQRGenerator(); // Reinitialize for new QR
-            }, 2000);
-        }
-    });
-}
-
-// Initialize the QR generator when server starts
-initializeQRGenerator().catch(console.error);
-
-// INSTANT QR Code Endpoint
-router.get('/qr', async (req, res) => {
-    try {
-        let qrToSend = null;
-
-        if (isQRReady && currentQR) {
-            // Case 1: QR is already available - send INSTANTLY
-            qrToSend = currentQR;
-            isQRReady = false;
-            currentQR = null;
-        } else {
-            // Case 2: Wait for new QR (should be very fast)
-            qrToSend = await new Promise((resolve) => {
-                qrResolveFunction = resolve;
-                // Timeout after 5 seconds
-                setTimeout(() => resolve(null), 5000);
-            });
-        }
-
-        if (qrToSend) {
-            res.json({ success: true, qr: qrToSend });
-        } else {
-            res.status(408).json({ error: 'QR generation timeout' });
-        }
-    } catch (error) {
-        res.status(500).json({ error: 'Failed to generate QR code' });
-    }
+// This route handles the initial page load for the pairing section
+router.get('/', (req, res) => {
+    res.sendFile('pairing.html', { root: './public' });
 });
 
-// Pairing Code Endpoint (also optimized)
-router.get('/code', async (req, res) => {
-    const { number } = req.query;
-    
-    if (!number) {
-        return res.status(400).json({ error: 'Phone number required' });
-    }
+// Socket.io connection for real-time updates is handled via the main server.js
+// We access the io instance from the request object set by the middleware
+router.post('/start', (req, res) => {
+    const io = req.io;
 
-    const sessionId = Math.random().toString(36).substring(2, 15);
-    const tempDir = path.join(__dirname, 'temp', sessionId);
-    fs.mkdirSync(tempDir, { recursive: true });
+    // Initialize the WhatsApp client with specific options for Render
+    const client = new Client({
+        puppeteer: {
+            headless: true,
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-accelerated-2d-canvas',
+                '--no-first-run',
+                '--no-zygote',
+                '--single-process',
+                '--disable-gpu'
+            ]
+        }
+    });
 
-    try {
-        const { state, saveCreds } = await useMultiFileAuthState(tempDir);
+    // Event: Generate QR Code
+    client.on('qr', async (qr) => {
+        console.log('QR Received:', qr);
+        try {
+            const qrImageUrl = await qrcode.toDataURL(qr);
+            io.emit('qrCode', { qr, qrImageUrl });
+            io.emit('statusMessage', 'Scan the QR code below...');
+        } catch (err) {
+            console.error('Error generating QR image:', err);
+            io.emit('statusMessage', 'Error generating QR code.');
+        }
+    });
 
-        const sock = makeWASocket({
-            auth: {
-                creds: state.creds,
-                keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "fatal" })),
-            },
-            printQRInTerminal: false,
-            logger: pino({ level: "fatal" }),
-            browser: Browsers.macOS("Safari"),
-            shouldSyncHistoryMessage: () => false,
-            syncFullHistory: false,
-            markOnlineOnConnect: false
-        });
+    // Event: Generate Pairing Code (Numeric)
+    client.on('pairing_code', (code) => {
+        console.log('Pairing Code Received:', code);
+        io.emit('pairingCode', code);
+        io.emit('statusMessage', `Alternatively, enter this code in your WhatsApp: ${code}`);
+    });
 
-        sock.ev.on('creds.update', saveCreds);
+    // Event: Successful Authentication
+    client.on('authenticated', (session) => {
+        io.emit('statusMessage', '✅ Successfully paired! Session saved. You can close this page.');
+        console.log('Authenticated!');
 
-        // Format the phone number correctly
-        const formatPhoneNumber = (num) => {
-            let clean = num.replace(/\D/g, '');
-            if (clean.startsWith('0')) clean = '254' + clean.substring(1);
-            if (clean.length === 9) clean = '254' + clean;
-            return clean;
-        };
-
-        const formattedNumber = formatPhoneNumber(number);
+        // Convert session to Base64 for storage
+        const sessionData = JSON.stringify(session);
+        storedSession = Buffer.from(sessionData).toString('base64');
         
-        // Request pairing code immediately
-        const code = await sock.requestPairingCode(formattedNumber);
-        
-        res.json({ success: true, code: code });
+        // TODO: In production, save `storedSession` to a database here.
+        // For now, we log it to the console on Render.
+        console.log('SESSION SAVED (Base64):', storedSession);
+        io.emit('sessionSaved', true);
+    });
 
-        // Handle the rest asynchronously
-        sock.ev.on("connection.update", async (update) => {
-            if (update.connection === "open") {
-                await delay(1000);
-                const credsPath = path.join(tempDir, 'creds.json');
-                
-                if (fs.existsSync(credsPath)) {
-                    try {
-                        const sessionData = fs.readFileSync(credsPath, 'utf8');
-                        const base64Session = Buffer.from(sessionData).toString('base64');
-                        const infinitySession = "INFINITY_" + base64Session;
+    client.on('ready', () => {
+        io.emit('statusMessage', 'Client is ready!');
+        console.log('Client is ready!');
+    });
 
-                        const message = `🔐 *YOUR WHATSAPP SESSION ID* - INFINITE-XMD
-*Session ID:* \`\`\`${infinitySession}\`\`\``;
+    client.on('disconnected', (reason) => {
+        io.emit('statusMessage', `Client was logged out: ${reason}`);
+        console.log('Client was logged out', reason);
+    });
 
-                        await sock.sendMessage(sock.user.id, { text: message });
-                    } catch (error) {
-                        console.error('Error sending session message:', error);
-                    }
-                }
+    // Initialize the client to start the process
+    client.initialize();
 
-                await sock.ws.close();
-                fs.rmSync(tempDir, { recursive: true, force: true });
-            }
-        });
-
-    } catch (error) {
-        console.error('Pairing code error:', error);
-        fs.rmSync(tempDir, { recursive: true, force: true });
-        res.status(500).json({ error: 'Failed to generate pairing code' });
-    }
+    res.json({ success: true, message: 'Pairing process started.' });
 });
-
-// Cleanup temp directory on server start
-const mainTempDir = path.join(__dirname, 'temp');
-if (fs.existsSync(mainTempDir)) {
-    fs.rmSync(mainTempDir, { recursive: true, force: true });
-}
 
 module.exports = router;
