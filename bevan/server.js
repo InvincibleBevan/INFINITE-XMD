@@ -1,16 +1,13 @@
 /**
- * INFINITE-XMD Session Server
- * Branded with ❤️ for Bevan Soceity
- *
- * Deploy this on Render:
- * - Supports QR & Pairing login.
- * - Sends session (prefixed INFINITY~) to user's WhatsApp.
- * - Now includes a friendly homepage at '/'
+ * INFINITE-XMD Public Session Server
+ * Dark themed site + QR + Pairing Code + INFINITY~ sessions
+ * Built with ❤️ for Bevan Soceity — Support: wa.me/254797827405
  */
 
 const express = require('express');
 const { default: makeWASocket, useMultiFileAuthState, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
 const pino = require('pino');
+const qrcode = require('qrcode');
 const path = require('path');
 
 const PORT = process.env.PORT || 3000;
@@ -18,49 +15,84 @@ const SESSION_DIR = path.join(__dirname, 'auth_info_baileys');
 
 const app = express();
 app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public'))); // serve /public for the site
 
-// Home page
-app.get('/', (req, res) => {
-  res.send(`
-    <div style="font-family: sans-serif; margin: 2rem;">
-      <h1>🚀 INFINITE-XMD Session Server</h1>
-      <p>This service generates WhatsApp <strong>Base64 session IDs</strong>—sent directly to your WhatsApp (prefixed with <strong>INFINITY~</strong>).</p>
-      <p>To use this app:</p>
-      <ul>
-        <li>Scan the QR code from the logs, or</li>
-        <li>IfWA_PHONE_NUMBER is set, use the pairing code shown in the logs.</li>
-      </ul>
-      <p>Once logged in, your session will be sent in parts via WhatsApp.</p>
-      <p>Powered by <strong>Bevan Soceity</strong> ✨</p>
-      <p>Need help? <a href="https://wa.me/254797827405">Contact Support</a></p>
-    </div>
-  `);
-});
+let sock;                 // shared socket
+let lastQR = null;        // latest QR string
+let lastQRTime = null;    // timestamp for QR freshness
 
 // Health check
 app.get('/api/health', (req, res) => res.json({ ok: true }));
 
+// Returns a PNG QR image of the latest QR (polls every few seconds from the page)
+app.get('/api/qr', async (req, res) => {
+  try {
+    if (!lastQR) {
+      // no QR currently — let the client retry
+      return res.status(204).end();
+    }
+    const buf = await qrcode.toBuffer(lastQR, { margin: 1, scale: 6 });
+    res.setHeader('Content-Type', 'image/png');
+    return res.send(buf);
+  } catch (e) {
+    return res.status(500).json({ error: 'Failed to render QR' });
+  }
+});
+
+// Generate a pairing code for a submitted phone number (any visitor can request)
+app.post('/api/pair', async (req, res) => {
+  try {
+    if (!sock) return res.status(503).json({ error: 'Socket not ready, try again shortly.' });
+
+    let { phone } = req.body || {};
+    if (!phone || typeof phone !== 'string') {
+      return res.status(400).json({ error: 'Provide phone as a string, e.g. "2547XXXXXXXX"' });
+    }
+    // sanitize: remove non-digits and leading +
+    phone = phone.replace(/[^\d]/g, '');
+    if (phone.length < 9) {
+      return res.status(400).json({ error: 'Phone looks invalid. Use international format, e.g. 2547XXXXXXXX' });
+    }
+
+    const code = await sock.requestPairingCode(phone);
+    console.log(`🔑 Pairing code for ${phone}: ${code}`);
+    return res.json({ code });
+  } catch (e) {
+    console.error('Failed to create pairing code:', e?.message || e);
+    return res.status(500).json({ error: 'Failed to create pairing code. Try again.' });
+  }
+});
+
+// Start Baileys and wire events
 async function startSessionServer() {
   const { state, saveCreds } = await useMultiFileAuthState(SESSION_DIR);
   const { version } = await fetchLatestBaileysVersion();
 
-  const sock = makeWASocket({
+  sock = makeWASocket({
     logger: pino({ level: 'silent' }),
-    printQRInTerminal: true,
+    printQRInTerminal: false, // we render it on the website instead
     auth: state,
     version
   });
 
-  if (!sock.authState.creds.registered) {
-    const phoneNumber = process.env.WA_PHONE_NUMBER;
-    if (phoneNumber) {
-      const code = await sock.requestPairingCode(phoneNumber);
-      console.log('📌 Pairing Code:', code);
-    } else {
-      console.log('⚠️ No WA_PHONE_NUMBER set → only QR available in logs');
+  // track QR for the webpage
+  sock.ev.on('connection.update', (update) => {
+    const { qr, connection, lastDisconnect } = update;
+    if (qr) {
+      lastQR = qr;
+      lastQRTime = Date.now();
     }
-  }
+    if (connection === 'open') {
+      console.log('✅ WhatsApp connection OPEN');
+      // clear QR when connected
+      lastQR = null;
+    }
+    if (connection === 'close') {
+      console.log('⚠️ WhatsApp connection CLOSED', lastDisconnect?.error?.message || '');
+    }
+  });
 
+  // On credential update → save & DM the session to the logged-in user
   sock.ev.on('creds.update', async () => {
     await saveCreds();
 
@@ -68,35 +100,58 @@ async function startSessionServer() {
       const creds = sock.authState.creds;
       const data = JSON.stringify(creds);
       let base64 = Buffer.from(data).toString('base64');
-      base64 = "INFINITY~" + base64;
 
-      const me = sock.user;
+      // Prefix for your brand
+      base64 = 'INFINITY~' + base64;
+
+      // Who is logged-in user?
+      const me = sock.user; // { id: '12345@s.whatsapp.net', ... }
       if (!me?.id) {
-        console.log('❌ Could not get user JID');
+        console.log('❌ Could not determine logged-in user JID');
         return;
       }
 
+      // Send a branded intro / instructions
       await sock.sendMessage(me.id, {
-        text: `✨ *INFINITE-XMD Session Generated!* ✨\n\n` +
-              `Your secure session ID below:\n- Copy all parts.\n- Go to your Heroku app → *Config Vars*.\n- Add as *SESSION_ID*.\n\n` +
-              `Powered by *Bevan Soceity*.\n` +
-              `Support: wa.me/254797827405\n` +
-              `Keep this session private!`
+        text:
+          `✨ *INFINITE-XMD Session Generated!* ✨\n\n` +
+          `🔐 Your secure session ID is ready.\n\n` +
+          `📌 *How to use it:*\n` +
+          `1️⃣ Copy the full session below (all parts).\n` +
+          `2️⃣ Go to your Heroku app → *Config Vars*.\n` +
+          `3️⃣ Add a new variable named *SESSION_ID*.\n` +
+          `4️⃣ Paste the session as the value.\n\n` +
+          `✅ Restart your Heroku app and you’re set.\n\n` +
+          `💡 Powered by *Bevan Soceity*.\n` +
+          `📞 Support: wa.me/254797827405\n\n` +
+          `⚠️ *Keep this session private* — do not share it.`
       });
 
-      const chunks = base64.match(/.{1,3900}/g);
+      // WhatsApp message size limit protection → chunk the session
+      const chunkSize = 3900;
+      const chunks = base64.match(new RegExp(`.{1,${chunkSize}}`, 'g')) || [base64];
+
       for (let i = 0; i < chunks.length; i++) {
-        await sock.sendMessage(me.id, {
-          text: `📦 Session Part ${i+1}/${chunks.length}:\n\n${chunks[i]}`
-        });
+        const part = `📦 *Session Part ${i + 1}/${chunks.length}:*\n\n${chunks[i]}`;
+        await sock.sendMessage(me.id, { text: part });
       }
 
       console.log(`✅ Session sent to ${me.id} in ${chunks.length} parts`);
     } catch (err) {
-      console.error('❌ Failed to send session:', err);
+      console.error('❌ Failed sending session to user:', err?.message || err);
     }
   });
+
+  // Optional: provide a default pairing code in logs (admin) if set
+  if (!sock.authState.creds.registered && process.env.WA_PHONE_NUMBER) {
+    try {
+      const code = await sock.requestPairingCode(String(process.env.WA_PHONE_NUMBER).replace(/[^\d]/g, ''));
+      console.log('📌 Admin Pairing Code:', code);
+    } catch (e) {
+      console.log('⚠️ Failed to pre-generate admin pairing code:', e?.message || e);
+    }
+  }
 }
 
-startSessionServer();
-app.listen(PORT, () => console.log(`🚀 Session server running on port ${PORT}`));
+startSessionServer().catch((e) => console.error('Failed to start session server:', e));
+app.listen(PORT, () => console.log(`🚀 INFINITE-XMD Session server running on port ${PORT}`));
