@@ -1,94 +1,202 @@
 const express = require('express');
-const { Client } = require('whatsapp-web.js');
-const qrcode = require('qrcode');
+const fs = require('fs');
+const path = require('path');
+const pino = require("pino");
+const {
+    default: makeWASocket,
+    useMultiFileAuthState,
+    delay,
+    makeCacheableSignalKeyStore,
+    Browsers
+} = require("@whiskeysockets/baileys");
+
 const router = express.Router();
 
-let storedSession = null;
+function generateId() {
+    return Math.random().toString(36).substring(2, 15);
+}
 
-router.get('/', (req, res) => {
-    res.sendFile('pairing.html', { root: './public' });
-});
+function removeFile(filePath) {
+    if (!fs.existsSync(filePath)) return false;
+    fs.rmSync(filePath, { recursive: true, force: true });
+    return true;
+}
 
-router.post('/start', (req, res) => {
-    const io = req.io;
+function formatPhoneNumber(number) {
+    let cleanNumber = number.replace(/\D/g, '');
+    if (cleanNumber.startsWith('0')) {
+        cleanNumber = '254' + cleanNumber.substring(1);
+    }
+    if (cleanNumber.length === 9) {
+        cleanNumber = '254' + cleanNumber;
+    }
+    return cleanNumber;
+}
 
-    const client = new Client({
-        puppeteer: {
-            headless: true,
-            args: [
-                '--no-sandbox',
-                '--disable-setuid-sandbox',
-                '--disable-dev-shm-usage',
-                '--disable-accelerated-2d-canvas',
-                '--no-first-run',
-                '--no-zygote',
-                '--single-process',
-                '--disable-gpu'
-            ]
-        }
-    });
+const activeSessions = new Map();
 
-    // Event: Generate QR Code
-    client.on('qr', async (qr) => {
-        console.log('QR Received:', qr);
-        try {
-            const qrImageUrl = await qrcode.toDataURL(qr);
-            io.emit('qrCode', { qr, qrImageUrl });
-            io.emit('statusMessage', 'Scan the QR code below...');
-        } catch (err) {
-            console.error('Error generating QR image:', err);
-            io.emit('statusMessage', 'Error generating QR code.');
-        }
-    });
+// QR Code Endpoint
+router.get('/qr', async (req, res) => {
+    const sessionId = generateId();
+    const tempDir = path.join(__dirname, 'temp', sessionId);
+    fs.mkdirSync(tempDir, { recursive: true });
 
-    // Event: Successful Authentication
-    client.on('authenticated', (session) => {
-        io.emit('statusMessage', '✅ Successfully paired! Session saved.');
-        console.log('Authenticated!');
-        const sessionData = JSON.stringify(session);
-        storedSession = Buffer.from(sessionData).toString('base64');
-        console.log('SESSION SAVED (Base64):', storedSession);
-        io.emit('sessionSaved', true);
-    });
+    try {
+        const { state, saveCreds } = await useMultiFileAuthState(tempDir);
 
-    client.on('ready', () => {
-        io.emit('statusMessage', 'Client is ready!');
-        console.log('Client is ready!');
-    });
-
-    client.on('disconnected', (reason) => {
-        io.emit('statusMessage', `Disconnected: ${reason}`);
-        console.log('Client disconnected.', reason);
-    });
-
-    // --- THE GUARANTEED METHOD TO GET PAIRING CODE ---
-    client.initialize().then(() => {
-        // Get the underlying Puppeteer page
-        client.getPage().then((page) => {
-            // Wait for the pairing code element to appear in the DOM
-            page.waitForSelector('div[data-testid="pairing-code"]', { timeout: 60000 })
-            .then(() => {
-                // Extract the text content of the pairing code element
-                return page.$eval('div[data-testid="pairing-code"]', element => element.textContent);
-            })
-            .then((pairingCode) => {
-                if (pairingCode) {
-                    console.log('Pairing Code Found:', pairingCode);
-                    // Emit the pairing code to the frontend
-                    io.emit('pairingCode', pairingCode);
-                    io.emit('statusMessage', `Or enter this pairing code: ${pairingCode}`);
-                }
-            })
-            .catch((err) => {
-                console.log('Could not find pairing code element (may have been scanned already):', err);
-            });
+        const sock = makeWASocket({
+            auth: {
+                creds: state.creds,
+                keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "fatal" })),
+            },
+            printQRInTerminal: false,
+            logger: pino({ level: "fatal" }),
+            browser: Browsers.macOS("Safari")
         });
-    }).catch(err => {
-        console.error('Error initializing client:', err);
-        io.emit('statusMessage', 'Failed to start pairing process.');
-    });
 
-    res.json({ success: true, message: 'Pairing process started.' });
+        activeSessions.set(sessionId, { sock, tempDir, createdAt: Date.now() });
+
+        sock.ev.on("connection.update", async (update) => {
+            const { connection, lastDisconnect, qr } = update;
+
+            if (qr) {
+                res.json({ success: true, qr: qr, sessionId: sessionId });
+            }
+
+            if (connection === "open") {
+                await delay(2000);
+                const credsPath = path.join(tempDir, 'creds.json');
+                if (fs.existsSync(credsPath)) {
+                    try {
+                        const sessionData = fs.readFileSync(credsPath, 'utf8');
+                        const base64Session = Buffer.from(sessionData).toString('base64');
+                        const infinitySession = "INFINITY_" + base64Session;
+
+                        const message = `🔐 *YOUR WHATSAPP SESSION ID* - INFINITE-XMD
+
+*Session ID:*
+\`\`\`
+${infinitySession}
+\`\`\`
+
+*Generated:* ${new Date().toLocaleString()}
+
+💻 Generated by Bevan Society`;
+
+                        await sock.sendMessage(sock.user.id, { text: message });
+                    } catch (error) {
+                        console.error('Error:', error);
+                    }
+                }
+
+                await delay(1000);
+                await sock.ws.close();
+                removeFile(tempDir);
+                activeSessions.delete(sessionId);
+            }
+        });
+
+        setTimeout(() => {
+            if (activeSessions.has(sessionId) && !res.headersSent) {
+                res.status(408).json({ error: 'QR generation timeout' });
+            }
+        }, 30000);
+
+    } catch (error) {
+        removeFile(tempDir);
+        res.status(500).json({ error: 'Failed to generate QR code' });
+    }
 });
+
+// Pairing Code Endpoint
+router.get('/code', async (req, res) => {
+    const { number } = req.query;
+    
+    if (!number) {
+        return res.status(400).json({ error: 'Phone number required' });
+    }
+
+    const sessionId = generateId();
+    const tempDir = path.join(__dirname, 'temp', sessionId);
+    fs.mkdirSync(tempDir, { recursive: true });
+
+    try {
+        const { state, saveCreds } = await useMultiFileAuthState(tempDir);
+
+        const sock = makeWASocket({
+            auth: {
+                creds: state.creds,
+                keys: makeCacheableSignalKeyStore(state.keys, pino({ level: "fatal" })),
+            },
+            printQRInTerminal: false,
+            logger: pino({ level: "fatal" }),
+            browser: Browsers.macOS("Safari")
+        });
+
+        sock.ev.on('creds.update', saveCreds);
+
+        sock.ev.on("connection.update", async (update) => {
+            const { connection } = update;
+
+            if (connection === "open") {
+                await delay(2000);
+                const credsPath = path.join(tempDir, 'creds.json');
+                if (fs.existsSync(credsPath)) {
+                    try {
+                        const sessionData = fs.readFileSync(credsPath, 'utf8');
+                        const base64Session = Buffer.from(sessionData).toString('base64');
+                        const infinitySession = "INFINITY_" + base64Session;
+
+                        const message = `🔐 *YOUR WHATSAPP SESSION ID* - INFINITE-XMD
+
+*Session ID:*
+\`\`\`
+${infinitySession}
+\`\`\`
+
+*Generated:* ${new Date().toLocaleString()}
+
+💻 Generated by Bevan Society`;
+
+                        await sock.sendMessage(sock.user.id, { text: message });
+                    } catch (error) {
+                        console.error('Error:', error);
+                    }
+                }
+
+                await delay(1000);
+                await sock.ws.close();
+                removeFile(tempDir);
+                activeSessions.delete(sessionId);
+            }
+        });
+
+        if (!sock.authState.creds.registered) {
+            await delay(1000);
+            const cleanNumber = formatPhoneNumber(number);
+            const pairingCode = await sock.requestPairingCode(cleanNumber);
+            
+            activeSessions.set(sessionId, { sock, tempDir, createdAt: Date.now() });
+            
+            res.json({ success: true, code: pairingCode, sessionId: sessionId });
+        }
+
+    } catch (error) {
+        removeFile(tempDir);
+        res.status(500).json({ error: 'Failed to generate pairing code' });
+    }
+});
+
+// Cleanup
+setInterval(() => {
+    const now = Date.now();
+    for (const [sessionId, session] of activeSessions.entries()) {
+        if (now - session.createdAt > 300000) {
+            if (session.sock) session.sock.ws.close();
+            removeFile(session.tempDir);
+            activeSessions.delete(sessionId);
+        }
+    }
+}, 60000);
 
 module.exports = router;
