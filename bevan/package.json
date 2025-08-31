@@ -1,7 +1,7 @@
 {
   "name": "infinite-xmd-website",
   "version": "1.0.0",
-  "description": "WhatsApp Bot Pairing Portal",
+  "description": "INFINITE-XMD WhatsApp Session Generator - Developed by Bevan Society",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -10,11 +10,8 @@
   "dependencies": {
     "express": "^4.18.2",
     "socket.io": "^4.7.2",
-    "qrcode": "^1.5.3",
-    "whatsapp-web.js": "^1.23.0"
-  },
-  "devDependencies": {
-    "nodemon": "^3.0.1"
+    "@whiskeysockets/baileys": "^6.4.0",
+    "pino": "^8.15.0"
   },
   "engines": {
     "node": ">=18.0.0"
