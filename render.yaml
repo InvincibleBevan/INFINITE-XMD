@@ -6,7 +6,5 @@ services:
     buildCommand: "npm install"
     startCommand: "node bevan/server.js"
     envVars:
-      - key: WA_PHONE_NUMBER
-        value: "+2547XXXXXXX"   # Replace with your WhatsApp number in international format
       - key: NODE_VERSION
         value: "18"
