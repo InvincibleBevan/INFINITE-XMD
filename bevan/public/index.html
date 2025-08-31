@@ -1,111 +1,228 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>INFINITE-XMD - WhatsApp Session Generator</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="utf-8" />
+  <title>INFINITE-XMD — Session Generator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --bg: #0b0f14;
+      --card: #111827;
+      --muted: #9ca3af;
+      --text: #e5e7eb;
+      --accent: #22d3ee;
+      --accent2: #a78bfa;
+      --success: #34d399;
+      --danger: #f87171;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: radial-gradient(1200px 800px at 20% 0%, rgba(34,211,238,0.08), transparent 40%),
+                  radial-gradient(1000px 600px at 80% 20%, rgba(167,139,250,0.08), transparent 40%),
+                  var(--bg);
+      color: var(--text);
+      font: 15px/1.6 ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Inter, Arial, sans-serif;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      padding: 24px;
+    }
+    .wrap { width: 100%; max-width: 980px; }
+    header {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+    h1 {
+      margin: 0 0 6px;
+      font-size: 28px;
+      letter-spacing: .2px;
+    }
+    .subtitle {
+      color: var(--muted);
+      margin-bottom: 20px;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+    @media (max-width: 880px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+    .card {
+      background: linear-gradient(180deg, rgba(255,255,255,.02), rgba(255,255,255,.008));
+      border: 1px solid rgba(255,255,255,.08);
+      border-radius: 16px;
+      padding: 18px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.25);
+    }
+    .card h2 {
+      margin: 0 0 10px;
+      font-size: 18px;
+      color: #fff;
+    }
+    .muted { color: var(--muted); }
+    .qr-wrap {
+      display: grid;
+      place-items: center;
+      height: 320px;
+      border-radius: 12px;
+      background: #0d1520;
+      border: 1px dashed rgba(255,255,255,.08);
+      overflow: hidden;
+    }
+    .qr-wrap img {
+      width: 280px; height: 280px; object-fit: contain;
+      filter: drop-shadow(0 8px 20px rgba(34,211,238,.15));
+    }
+    .pair {
+      display: grid;
+      gap: 10px;
+    }
+    .row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+    }
+    input[type="tel"] {
+      background: #0d1520;
+      border: 1px solid rgba(255,255,255,.1);
+      color: var(--text);
+      padding: 12px 14px;
+      border-radius: 10px;
+      outline: none;
+      font-size: 15px;
+    }
+    button {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #061016;
+      border: 0;
+      padding: 12px 16px;
+      font-weight: 700;
+      border-radius: 10px;
+      cursor: pointer;
+      transition: transform .06s ease, filter .2s ease;
+    }
+    button:hover { filter: brightness(1.06); }
+    button:active { transform: translateY(1px); }
+    .code {
+      font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+      background: #0d1520;
+      border: 1px solid rgba(255,255,255,.1);
+      color: var(--accent);
+      border-radius: 10px;
+      padding: 12px 14px;
+      text-align: center;
+      letter-spacing: 1px;
+      font-size: 18px;
+    }
+    footer {
+      margin-top: 18px;
+      text-align: center;
+      color: var(--muted);
+    }
+    a { color: var(--accent); text-decoration: none; }
+    .badge {
+      display: inline-grid; place-items: center;
+      padding: 6px 10px; border-radius: 999px;
+      background: rgba(34,211,238,.1);
+      color: var(--accent);
+      border: 1px solid rgba(34,211,238,.25);
+      font-weight: 700; font-size: 12px;
+    }
+    .tip { color: var(--muted); font-size: 13px; }
+    .ok { color: var(--success); }
+    .err { color: var(--danger); }
+  </style>
 </head>
 <body>
-    <!-- Navigation -->
-    <nav class="navbar">
-        <div class="nav-container">
-            <div class="nav-logo">
-                <h2>🤖 INFINITE-XMD</h2>
-            </div>
-            <div class="nav-links">
-                <a href="#home">Home</a>
-                <a href="#generator">Generator</a>
-                <a href="#about">About</a>
-            </div>
+  <div class="wrap">
+    <header>
+      <div class="badge">INFINITE-XMD — Session Generator</div>
+      <h1>Secure WhatsApp Session (INFINITY~)</h1>
+      <div class="subtitle">Scan the QR or request a Pairing Code. Your session will be sent to your WhatsApp in parts.</div>
+    </header>
+
+    <div class="grid">
+      <!-- QR CARD -->
+      <section class="card">
+        <h2>📷 Scan QR</h2>
+        <div class="qr-wrap">
+          <img id="qr" alt="QR will appear here" />
         </div>
-    </nav>
+        <p class="tip">If QR is blank, it’s being generated. It refreshes automatically.</p>
+      </section>
 
-    <!-- Hero Section -->
-    <section id="home" class="hero">
-        <div class="hero-content">
-            <h1>WhatsApp Session Generator</h1>
-            <p>Create secure session IDs for your WhatsApp automation needs</p>
-            <button onclick="scrollToSection('generator')" class="btn-primary">Get Started</button>
+      <!-- PAIRING CODE CARD -->
+      <section class="card">
+        <h2>🔑 Pair via Phone Number</h2>
+        <div class="pair">
+          <div class="row">
+            <input id="phone" type="tel" placeholder="Enter phone e.g. 2547XXXXXXXX" />
+            <button id="getCode">Get Pairing Code</button>
+          </div>
+          <div id="code" class="code" style="display:none;"></div>
+          <div id="msg" class="tip"></div>
         </div>
-    </section>
+      </section>
+    </div>
 
-    <!-- Generator Section -->
-    <section id="generator" class="generator">
-        <div class="container">
-            <h2>Choose Your Method</h2>
-            <p class="section-subtitle">Select how you want to generate your session ID</p>
-            
-            <div class="generator-options">
-                <div class="option-card" onclick="showGenerator('qr')">
-                    <div class="option-icon">📱</div>
-                    <h3>QR Code</h3>
-                    <p>Scan QR code with your WhatsApp camera</p>
-                    <button class="option-btn">Use QR Code</button>
-                </div>
-
-                <div class="option-card" onclick="showGenerator('code')">
-                    <div class="option-icon">⌨️</div>
-                    <h3>Pairing Code</h3>
-                    <p>Enter pairing code in WhatsApp settings</p>
-                    <button class="option-btn">Use Pairing Code</button>
-                </div>
-            </div>
-
-            <!-- QR Code Generator -->
-            <div id="qr-generator" class="generator-content hidden">
-                <div class="generator-header">
-                    <h3>📱 QR Code Generator</h3>
-                    <button onclick="hideGenerators()" class="back-btn">← Back</button>
-                </div>
-                <div class="generator-body">
-                    <button onclick="generateQR()" class="btn-primary">Generate QR Code</button>
-                    <div class="qr-container">
-                        <div id="qrcode">
-                            <div class="qr-placeholder">QR code will appear here</div>
-                        </div>
-                        <p id="qrStatus">Click generate to create QR code</p>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Pairing Code Generator -->
-            <div id="code-generator" class="generator-content hidden">
-                <div class="generator-header">
-                    <h3>⌨️ Pairing Code Generator</h3>
-                    <button onclick="hideGenerators()" class="back-btn">← Back</button>
-                </div>
-                <div class="generator-body">
-                    <div class="input-group">
-                        <label>Your WhatsApp Number:</label>
-                        <input type="text" id="codeNumber" placeholder="254712345678">
-                        <small>With country code, no + sign</small>
-                    </div>
-                    <button onclick="generatePairingCode()" class="btn-primary">Generate Pairing Code</button>
-                    <div class="result-box">
-                        <div id="codeDisplay"></div>
-                        <p id="codeStatus">Enter your number and click generate</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- About Section -->
-    <section id="about" class="about">
-        <div class="container">
-            <h2>About INFINITE-XMD</h2>
-            <p>Developed by Bevan Society - Professional WhatsApp session generation</p>
-        </div>
-    </section>
-
-    <!-- Footer -->
-    <footer class="footer">
-        <div class="container">
-            <p>&copy; 2024 Bevan Society. All rights reserved.</p>
-        </div>
+    <footer>
+      <p>💡 Powered by <strong>Bevan Soceity</strong> • Need help? <a href="https://wa.me/254797827405" target="_blank">wa.me/254797827405</a></p>
     </footer>
+  </div>
 
-    <script src="script.js"></script>
+  <script>
+    // Poll QR every 4 seconds
+    async function refreshQR() {
+      try {
+        const img = document.getElementById('qr');
+        // Append cache-buster
+        img.src = '/api/qr?ts=' + Date.now();
+      } catch (e) { /* ignore */ }
+    }
+    setInterval(refreshQR, 4000);
+    refreshQR();
+
+    // Pairing code request
+    const btn = document.getElementById('getCode');
+    const msg = document.getElementById('msg');
+    const codeBox = document.getElementById('code');
+
+    btn.addEventListener('click', async () => {
+      const phone = document.getElementById('phone').value.trim();
+      msg.textContent = '';
+      codeBox.style.display = 'none';
+      codeBox.textContent = '';
+
+      if (!phone) {
+        msg.innerHTML = '<span class="err">Enter a phone number in international format, e.g. 2547XXXXXXXX</span>';
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Generating…';
+      try {
+        const res = await fetch('/api/pair', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ phone })
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data?.error || 'Failed to get pairing code');
+        }
+        codeBox.textContent = data.code;
+        codeBox.style.display = 'block';
+        msg.innerHTML = '<span class="ok">Pairing code generated! Enter it in WhatsApp → Linked Devices → Link with phone number.</span>';
+      } catch (e) {
+        msg.innerHTML = '<span class="err">' + (e.message || 'Error') + '</span>';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Get Pairing Code';
+      }
+    });
+  </script>
 </body>
-                                </html>
+</html>
