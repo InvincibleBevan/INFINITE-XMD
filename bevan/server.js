@@ -1,35 +1,33 @@
 const express = require('express');
-const path = require('path');
-const { Server } = require('socket.io');
+const socketIo = require('socket.io');
 const http = require('http');
+const path = require('path');
+
+// Import the pairing route
 const pairingRouter = require('./routes/pairing');
 
 const app = express();
 const server = http.createServer(app);
-const io = new Server(server);
+const io = socketIo(server);
 
-const PORT = process.env.PORT || 3000;
-
-// Middleware
-app.use(express.json());
-app.use(express.static(path.join(__dirname, 'public')));
-
-// CORS
+// Middleware to set up socket.io in the request object
 app.use((req, res, next) => {
-    res.header('Access-Control-Allow-Origin', '*');
-    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+    req.io = io;
     next();
 });
 
-// Routes
-app.use('/api/pair', pairingRouter);
+// Serve static files from the 'public' directory
+app.use(express.static(path.join(__dirname, 'public')));
 
-// Serve main page
+// Use the pairing router for all routes related to pairing
+app.use('/pairing', pairingRouter);
+
+// Route for the main homepage
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
+const PORT = process.env.PORT || 3000;
 server.listen(PORT, () => {
-    console.log(`🌐 INFINITE-XMD Website running on port ${PORT}`);
-    console.log('💻 Developed by Bevan Society');
+    console.log(`Bevan app running on http://localhost:${PORT}`);
 });
