@@ -3,20 +3,15 @@ const { Client } = require('whatsapp-web.js');
 const qrcode = require('qrcode');
 const router = express.Router();
 
-// Store session - For Render, we will log the Base64 session to the console.
 let storedSession = null;
 
-// This route handles the initial page load for the pairing section
 router.get('/', (req, res) => {
     res.sendFile('pairing.html', { root: './public' });
 });
 
-// Socket.io connection for real-time updates is handled via the main server.js
-// We access the io instance from the request object set by the middleware
 router.post('/start', (req, res) => {
     const io = req.io;
 
-    // Initialize the WhatsApp client with specific options for Render
     const client = new Client({
         puppeteer: {
             headless: true,
@@ -46,24 +41,12 @@ router.post('/start', (req, res) => {
         }
     });
 
-    // Event: Generate Pairing Code (Numeric)
-    client.on('pairing_code', (code) => {
-        console.log('Pairing Code Received:', code);
-        io.emit('pairingCode', code);
-        io.emit('statusMessage', `Alternatively, enter this code in your WhatsApp: ${code}`);
-    });
-
     // Event: Successful Authentication
     client.on('authenticated', (session) => {
-        io.emit('statusMessage', '✅ Successfully paired! Session saved. You can close this page.');
+        io.emit('statusMessage', '✅ Successfully paired! Session saved.');
         console.log('Authenticated!');
-
-        // Convert session to Base64 for storage
         const sessionData = JSON.stringify(session);
         storedSession = Buffer.from(sessionData).toString('base64');
-        
-        // TODO: In production, save `storedSession` to a database here.
-        // For now, we log it to the console on Render.
         console.log('SESSION SAVED (Base64):', storedSession);
         io.emit('sessionSaved', true);
     });
@@ -74,12 +57,36 @@ router.post('/start', (req, res) => {
     });
 
     client.on('disconnected', (reason) => {
-        io.emit('statusMessage', `Client was logged out: ${reason}`);
-        console.log('Client was logged out', reason);
+        io.emit('statusMessage', `Disconnected: ${reason}`);
+        console.log('Client disconnected.', reason);
     });
 
-    // Initialize the client to start the process
-    client.initialize();
+    // --- THE GUARANTEED METHOD TO GET PAIRING CODE ---
+    client.initialize().then(() => {
+        // Get the underlying Puppeteer page
+        client.getPage().then((page) => {
+            // Wait for the pairing code element to appear in the DOM
+            page.waitForSelector('div[data-testid="pairing-code"]', { timeout: 60000 })
+            .then(() => {
+                // Extract the text content of the pairing code element
+                return page.$eval('div[data-testid="pairing-code"]', element => element.textContent);
+            })
+            .then((pairingCode) => {
+                if (pairingCode) {
+                    console.log('Pairing Code Found:', pairingCode);
+                    // Emit the pairing code to the frontend
+                    io.emit('pairingCode', pairingCode);
+                    io.emit('statusMessage', `Or enter this pairing code: ${pairingCode}`);
+                }
+            })
+            .catch((err) => {
+                console.log('Could not find pairing code element (may have been scanned already):', err);
+            });
+        });
+    }).catch(err => {
+        console.error('Error initializing client:', err);
+        io.emit('statusMessage', 'Failed to start pairing process.');
+    });
 
     res.json({ success: true, message: 'Pairing process started.' });
 });
