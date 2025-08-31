@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pair WhatsApp - INFINITE-XMD</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📱 Pair WhatsApp</h1>
+            <p class="credits">Developed by Bevan Society</p>
+            <a href="index.html" class="back-link">← Back to Home</a>
+        </div>
+
+        <div class="status-bar">
+            <div class="status-item" id="statusBot">
+                <span class="status-dot"></span>
+                Bot Status: Connecting...
+            </div>
+            <div class="status-item" id="statusOwner">
+                <span class="status-dot"></span>
+                Owner: Not Set
+            </div>
+            <button onclick="restartPairing()" class="restart-btn">🔄 Restart</button>
+        </div>
+        
+        <div class="qr-container">
+            <h2>Scan QR Code to Link WhatsApp</h2>
+            <div id="qrcode">
+                <div class="qr-placeholder">Generating QR code...</div>
+            </div>
+            <p id="status">Initializing WhatsApp pairing...</p>
+        </div>
+        
+        <div class="session-info" id="sessionInfo" style="display: none;">
+            <h3>✅ Pairing Successful!</h3>
+            <p>Session ID has been sent to the owner's WhatsApp</p>
+            <div class="info-box">
+                <p><strong>Next Steps:</strong></p>
+                <ul>
+                    <li>Check owner's WhatsApp for session details</li>
+                    <li>Use the session ID in your main bot</li>
+                    <li>Keep this page open for new pairings</li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="instructions">
+            <h3>📋 How to Pair:</h3>
+            <ol>
+                <li>Open WhatsApp on your phone</li>
+                <li>Tap Menu → Linked Devices</li>
+                <li>Tap Link a Device</li>
+                <li>Scan the QR code above</li>
+                <li>Wait for authentication confirmation</li>
+            </ol>
+        </div>
+        
+        <div class="footer">
+            <p>Need to set up owner? <a href="owner.html">Click here</a></p>
+        </div>
+    </div>
+    
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        let ownerSet = false;
+
+        // Update status indicators
+        async function updateStatus() {
+            try {
+                const response = await fetch('/api/status');
+                const status = await response.json();
+                
+                updateStatusIndicator('statusBot', status.isReady, status.isReady ? 'Bot Ready' : 'Bot Connecting');
+                updateStatusIndicator('statusOwner', status.hasOwner, status.hasOwner ? 'Owner Set' : 'Owner Not Set');
+                ownerSet = status.hasOwner;
+                
+            } catch (error) {
+                console.error('Status update failed:', error);
+            }
+        }
+
+        function updateStatusIndicator(elementId, isActive, text) {
+            const element = document.getElementById(elementId);
+            const dot = element.querySelector('.status-dot');
+            
+            dot.style.background = isActive ? '#4caf50' : '#ff9800';
+            element.innerHTML = `<span class="status-dot"></span> ${text}`;
+        }
+
+        function restartPairing() {
+            fetch('/api/restart-pairing', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    alert('Pairing restarted! New QR code generating...');
+                });
+        }
+
+        // Socket event handlers
+        socket.on('connect', () => {
+            console.log('Connected to pairing server');
+            document.getElementById('status').textContent = 'Waiting for QR code...';
+            updateStatus();
+        });
+
+        socket.on('qr', (qrDataUrl) => {
+            document.getElementById('status').textContent = 'Scan the QR code with WhatsApp';
+            
+            const qrContainer = document.getElementById('qrcode');
+            qrContainer.innerHTML = '';
+            
+            const img = document.createElement('img');
+            img.src = qrDataUrl;
+            img.alt = 'WhatsApp QR Code';
+            img.classList.add('qr-image');
+            
+            qrContainer.appendChild(img);
+
+            if (!ownerSet) {
+                document.getElementById('status').textContent += ' - ⚠️ Owner not set';
+            }
+        });
+
+        socket.on('authenticated', () => {
+            document.getElementById('status').textContent = '✅ WhatsApp authenticated successfully!';
+            document.getElementById('status').style.color = 'green';
+        });
+
+        socket.on('ready', () => {
+            document.getElementById('status').textContent = '🤖 INFINITE-XMD is ready!';
+            document.getElementById('sessionInfo').style.display = 'block';
+            updateStatus();
+        });
+
+        // Update status every 10 seconds
+        setInterval(updateStatus, 10000);
+        updateStatus();
+    </script>
+</body>
+</html>
